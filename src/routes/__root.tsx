@@ -77,14 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Young Machine · Ultimate Frisbee Club" },
+      { name: "description", content: "Young Machine (YM) — a competitive Ultimate Frisbee club. Training, tournaments, and team performance." },
+      { name: "author", content: "Young Machine" },
+      { name: "theme-color", content: "#0A0A0A" },
+      { property: "og:title", content: "Young Machine · Ultimate Frisbee Club" },
+      { property: "og:description", content: "Train hard. Play smart. Move as one." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -102,7 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
