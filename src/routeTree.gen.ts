@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as PlayerRouteImport } from './routes/player'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -48,6 +49,9 @@ import { Route as DashboardFitnessRouteImport } from './routes/dashboard.fitness
 import { Route as DashboardContentRouteImport } from './routes/dashboard.content'
 import { Route as DashboardAttendanceRouteImport } from './routes/dashboard.attendance'
 import { Route as DashboardAchievementsRouteImport } from './routes/dashboard.achievements'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
@@ -62,6 +66,11 @@ const PlayersRoute = PlayersRouteImport.update({
 const PlayerRoute = PlayerRouteImport.update({
   id: '/player',
   path: '/player',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -244,6 +253,24 @@ const DashboardAchievementsRoute = DashboardAchievementsRouteImport.update({
   path: '/achievements',
   getParentRoute: () => DashboardRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -254,9 +281,12 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/player': typeof PlayerRouteWithChildren
   '/players': typeof PlayersRoute
   '/tournaments': typeof TournamentsRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/dashboard/achievements': typeof DashboardAchievementsRoute
   '/dashboard/attendance': typeof DashboardAttendanceRoute
   '/dashboard/content': typeof DashboardContentRoute
@@ -285,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/player/training': typeof PlayerTrainingRoute
   '/player/workouts': typeof PlayerWorkoutsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -294,9 +325,12 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/player': typeof PlayerRouteWithChildren
   '/players': typeof PlayersRoute
   '/tournaments': typeof TournamentsRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/dashboard/achievements': typeof DashboardAchievementsRoute
   '/dashboard/attendance': typeof DashboardAttendanceRoute
   '/dashboard/content': typeof DashboardContentRoute
@@ -325,6 +359,7 @@ export interface FileRoutesByTo {
   '/player/training': typeof PlayerTrainingRoute
   '/player/workouts': typeof PlayerWorkoutsRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -336,9 +371,12 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/player': typeof PlayerRouteWithChildren
   '/players': typeof PlayersRoute
   '/tournaments': typeof TournamentsRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/dashboard/achievements': typeof DashboardAchievementsRoute
   '/dashboard/attendance': typeof DashboardAttendanceRoute
   '/dashboard/content': typeof DashboardContentRoute
@@ -367,6 +405,7 @@ export interface FileRoutesById {
   '/player/training': typeof PlayerTrainingRoute
   '/player/workouts': typeof PlayerWorkoutsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -379,9 +418,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/gallery'
     | '/login'
+    | '/mcp'
     | '/player'
     | '/players'
     | '/tournaments'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/dashboard/achievements'
     | '/dashboard/attendance'
     | '/dashboard/content'
@@ -410,6 +452,7 @@ export interface FileRouteTypes {
     | '/player/training'
     | '/player/workouts'
     | '/dashboard/'
+    | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -419,9 +462,12 @@ export interface FileRouteTypes {
     | '/contact'
     | '/gallery'
     | '/login'
+    | '/mcp'
     | '/player'
     | '/players'
     | '/tournaments'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/dashboard/achievements'
     | '/dashboard/attendance'
     | '/dashboard/content'
@@ -450,6 +496,7 @@ export interface FileRouteTypes {
     | '/player/training'
     | '/player/workouts'
     | '/dashboard'
+    | '/.mcp/invoke-tool/$tool'
   id:
     | '__root__'
     | '/'
@@ -460,9 +507,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/gallery'
     | '/login'
+    | '/mcp'
     | '/player'
     | '/players'
     | '/tournaments'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/dashboard/achievements'
     | '/dashboard/attendance'
     | '/dashboard/content'
@@ -491,6 +541,7 @@ export interface FileRouteTypes {
     | '/player/training'
     | '/player/workouts'
     | '/dashboard/'
+    | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -502,9 +553,13 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
   PlayerRoute: typeof PlayerRouteWithChildren
   PlayersRoute: typeof PlayersRoute
   TournamentsRoute: typeof TournamentsRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -528,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/player'
       fullPath: '/player'
       preLoaderRoute: typeof PlayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -782,6 +844,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAchievementsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -869,9 +952,14 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
   PlayerRoute: PlayerRouteWithChildren,
   PlayersRoute: PlayersRoute,
   TournamentsRoute: TournamentsRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
