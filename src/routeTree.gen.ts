@@ -13,11 +13,18 @@ import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CoachesRouteImport } from './routes/coaches'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardWorkoutsRouteImport } from './routes/dashboard.workouts'
+import { Route as DashboardTrainingRouteImport } from './routes/dashboard.training'
+import { Route as DashboardTournamentsRouteImport } from './routes/dashboard.tournaments'
+import { Route as DashboardPlayersRouteImport } from './routes/dashboard.players'
+import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
@@ -37,6 +44,11 @@ const LoginRoute = LoginRouteImport.update({
 const GalleryRoute = GalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -64,6 +76,36 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardWorkoutsRoute = DashboardWorkoutsRouteImport.update({
+  id: '/workouts',
+  path: '/workouts',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTrainingRoute = DashboardTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTournamentsRoute = DashboardTournamentsRouteImport.update({
+  id: '/tournaments',
+  path: '/tournaments',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardPlayersRoute = DashboardPlayersRouteImport.update({
+  id: '/players',
+  path: '/players',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,10 +113,17 @@ export interface FileRoutesByFullPath {
   '/achievements': typeof AchievementsRoute
   '/coaches': typeof CoachesRoute
   '/contact': typeof ContactRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/players': typeof PlayersRoute
   '/tournaments': typeof TournamentsRoute
+  '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/players': typeof DashboardPlayersRoute
+  '/dashboard/tournaments': typeof DashboardTournamentsRoute
+  '/dashboard/training': typeof DashboardTrainingRoute
+  '/dashboard/workouts': typeof DashboardWorkoutsRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +135,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/players': typeof PlayersRoute
   '/tournaments': typeof TournamentsRoute
+  '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/players': typeof DashboardPlayersRoute
+  '/dashboard/tournaments': typeof DashboardTournamentsRoute
+  '/dashboard/training': typeof DashboardTrainingRoute
+  '/dashboard/workouts': typeof DashboardWorkoutsRoute
+  '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,10 +149,17 @@ export interface FileRoutesById {
   '/achievements': typeof AchievementsRoute
   '/coaches': typeof CoachesRoute
   '/contact': typeof ContactRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/players': typeof PlayersRoute
   '/tournaments': typeof TournamentsRoute
+  '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/players': typeof DashboardPlayersRoute
+  '/dashboard/tournaments': typeof DashboardTournamentsRoute
+  '/dashboard/training': typeof DashboardTrainingRoute
+  '/dashboard/workouts': typeof DashboardWorkoutsRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,10 +169,17 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/coaches'
     | '/contact'
+    | '/dashboard'
     | '/gallery'
     | '/login'
     | '/players'
     | '/tournaments'
+    | '/dashboard/notifications'
+    | '/dashboard/players'
+    | '/dashboard/tournaments'
+    | '/dashboard/training'
+    | '/dashboard/workouts'
+    | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +191,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/players'
     | '/tournaments'
+    | '/dashboard/notifications'
+    | '/dashboard/players'
+    | '/dashboard/tournaments'
+    | '/dashboard/training'
+    | '/dashboard/workouts'
+    | '/dashboard'
   id:
     | '__root__'
     | '/'
@@ -129,10 +204,17 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/coaches'
     | '/contact'
+    | '/dashboard'
     | '/gallery'
     | '/login'
     | '/players'
     | '/tournaments'
+    | '/dashboard/notifications'
+    | '/dashboard/players'
+    | '/dashboard/tournaments'
+    | '/dashboard/training'
+    | '/dashboard/workouts'
+    | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -141,6 +223,7 @@ export interface RootRouteChildren {
   AchievementsRoute: typeof AchievementsRoute
   CoachesRoute: typeof CoachesRoute
   ContactRoute: typeof ContactRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   PlayersRoute: typeof PlayersRoute
@@ -175,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/gallery'
       fullPath: '/gallery'
       preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -212,8 +302,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/workouts': {
+      id: '/dashboard/workouts'
+      path: '/workouts'
+      fullPath: '/dashboard/workouts'
+      preLoaderRoute: typeof DashboardWorkoutsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/training': {
+      id: '/dashboard/training'
+      path: '/training'
+      fullPath: '/dashboard/training'
+      preLoaderRoute: typeof DashboardTrainingRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/tournaments': {
+      id: '/dashboard/tournaments'
+      path: '/tournaments'
+      fullPath: '/dashboard/tournaments'
+      preLoaderRoute: typeof DashboardTournamentsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/players': {
+      id: '/dashboard/players'
+      path: '/players'
+      fullPath: '/dashboard/players'
+      preLoaderRoute: typeof DashboardPlayersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/notifications': {
+      id: '/dashboard/notifications'
+      path: '/notifications'
+      fullPath: '/dashboard/notifications'
+      preLoaderRoute: typeof DashboardNotificationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
+
+interface DashboardRouteChildren {
+  DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardPlayersRoute: typeof DashboardPlayersRoute
+  DashboardTournamentsRoute: typeof DashboardTournamentsRoute
+  DashboardTrainingRoute: typeof DashboardTrainingRoute
+  DashboardWorkoutsRoute: typeof DashboardWorkoutsRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardPlayersRoute: DashboardPlayersRoute,
+  DashboardTournamentsRoute: DashboardTournamentsRoute,
+  DashboardTrainingRoute: DashboardTrainingRoute,
+  DashboardWorkoutsRoute: DashboardWorkoutsRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -221,6 +375,7 @@ const rootRouteChildren: RootRouteChildren = {
   AchievementsRoute: AchievementsRoute,
   CoachesRoute: CoachesRoute,
   ContactRoute: ContactRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   PlayersRoute: PlayersRoute,
