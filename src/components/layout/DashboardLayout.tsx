@@ -72,7 +72,8 @@ export function DashboardLayout({ title, children }: { title?: string; children:
             </div>
             <ul className="space-y-0.5">
               {g.items.map((item) => {
-                const active = item.exact ? path === item.to : path.startsWith(item.to);
+                const exact = "exact" in item && item.exact;
+                const active = exact ? path === item.to : path === item.to || path.startsWith(item.to + "/");
                 const Icon = item.icon;
                 return (
                   <li key={item.to}>
