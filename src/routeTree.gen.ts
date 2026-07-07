@@ -51,7 +51,20 @@ import { Route as DashboardAttendanceRouteImport } from './routes/dashboard.atte
 import { Route as DashboardAchievementsRouteImport } from './routes/dashboard.achievements'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as DashboardWorkoutsCreateRouteImport } from './routes/dashboard.workouts.create'
+import { Route as DashboardWorkoutsWorkoutIdRouteImport } from './routes/dashboard.workouts.$workoutId'
+import { Route as DashboardTrainingCreateRouteImport } from './routes/dashboard.training.create'
+import { Route as DashboardTrainingTrainingIdRouteImport } from './routes/dashboard.training.$trainingId'
+import { Route as DashboardTournamentsCreateRouteImport } from './routes/dashboard.tournaments.create'
+import { Route as DashboardTournamentsTournamentIdRouteImport } from './routes/dashboard.tournaments.$tournamentId'
+import { Route as DashboardTeamLineupCreateRouteImport } from './routes/dashboard.team-lineup.create'
+import { Route as DashboardPlayersCreateRouteImport } from './routes/dashboard.players.create'
+import { Route as DashboardPlayersPlayerIdRouteImport } from './routes/dashboard.players.$playerId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DashboardWorkoutsWorkoutIdEditRouteImport } from './routes/dashboard.workouts.$workoutId.edit'
+import { Route as DashboardTrainingTrainingIdEditRouteImport } from './routes/dashboard.training.$trainingId.edit'
+import { Route as DashboardTournamentsTournamentIdEditRouteImport } from './routes/dashboard.tournaments.$tournamentId.edit'
+import { Route as DashboardPlayersPlayerIdEditRouteImport } from './routes/dashboard.players.$playerId.edit'
 
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
@@ -265,11 +278,86 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardWorkoutsCreateRoute = DashboardWorkoutsCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => DashboardWorkoutsRoute,
+} as any)
+const DashboardWorkoutsWorkoutIdRoute =
+  DashboardWorkoutsWorkoutIdRouteImport.update({
+    id: '/$workoutId',
+    path: '/$workoutId',
+    getParentRoute: () => DashboardWorkoutsRoute,
+  } as any)
+const DashboardTrainingCreateRoute = DashboardTrainingCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => DashboardTrainingRoute,
+} as any)
+const DashboardTrainingTrainingIdRoute =
+  DashboardTrainingTrainingIdRouteImport.update({
+    id: '/$trainingId',
+    path: '/$trainingId',
+    getParentRoute: () => DashboardTrainingRoute,
+  } as any)
+const DashboardTournamentsCreateRoute =
+  DashboardTournamentsCreateRouteImport.update({
+    id: '/create',
+    path: '/create',
+    getParentRoute: () => DashboardTournamentsRoute,
+  } as any)
+const DashboardTournamentsTournamentIdRoute =
+  DashboardTournamentsTournamentIdRouteImport.update({
+    id: '/$tournamentId',
+    path: '/$tournamentId',
+    getParentRoute: () => DashboardTournamentsRoute,
+  } as any)
+const DashboardTeamLineupCreateRoute =
+  DashboardTeamLineupCreateRouteImport.update({
+    id: '/create',
+    path: '/create',
+    getParentRoute: () => DashboardTeamLineupRoute,
+  } as any)
+const DashboardPlayersCreateRoute = DashboardPlayersCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => DashboardPlayersRoute,
+} as any)
+const DashboardPlayersPlayerIdRoute =
+  DashboardPlayersPlayerIdRouteImport.update({
+    id: '/$playerId',
+    path: '/$playerId',
+    getParentRoute: () => DashboardPlayersRoute,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardWorkoutsWorkoutIdEditRoute =
+  DashboardWorkoutsWorkoutIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardWorkoutsWorkoutIdRoute,
+  } as any)
+const DashboardTrainingTrainingIdEditRoute =
+  DashboardTrainingTrainingIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardTrainingTrainingIdRoute,
+  } as any)
+const DashboardTournamentsTournamentIdEditRoute =
+  DashboardTournamentsTournamentIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardTournamentsTournamentIdRoute,
+  } as any)
+const DashboardPlayersPlayerIdEditRoute =
+  DashboardPlayersPlayerIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardPlayersPlayerIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -294,14 +382,14 @@ export interface FileRoutesByFullPath {
   '/dashboard/gallery': typeof DashboardGalleryRoute
   '/dashboard/injuries': typeof DashboardInjuriesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
-  '/dashboard/players': typeof DashboardPlayersRoute
+  '/dashboard/players': typeof DashboardPlayersRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/submissions': typeof DashboardSubmissionsRoute
-  '/dashboard/team-lineup': typeof DashboardTeamLineupRoute
-  '/dashboard/tournaments': typeof DashboardTournamentsRoute
-  '/dashboard/training': typeof DashboardTrainingRoute
-  '/dashboard/workouts': typeof DashboardWorkoutsRoute
+  '/dashboard/team-lineup': typeof DashboardTeamLineupRouteWithChildren
+  '/dashboard/tournaments': typeof DashboardTournamentsRouteWithChildren
+  '/dashboard/training': typeof DashboardTrainingRouteWithChildren
+  '/dashboard/workouts': typeof DashboardWorkoutsRouteWithChildren
   '/player/attendance': typeof PlayerAttendanceRoute
   '/player/dashboard': typeof PlayerDashboardRoute
   '/player/fitness': typeof PlayerFitnessRoute
@@ -316,6 +404,19 @@ export interface FileRoutesByFullPath {
   '/player/workouts': typeof PlayerWorkoutsRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/dashboard/players/$playerId': typeof DashboardPlayersPlayerIdRouteWithChildren
+  '/dashboard/players/create': typeof DashboardPlayersCreateRoute
+  '/dashboard/team-lineup/create': typeof DashboardTeamLineupCreateRoute
+  '/dashboard/tournaments/$tournamentId': typeof DashboardTournamentsTournamentIdRouteWithChildren
+  '/dashboard/tournaments/create': typeof DashboardTournamentsCreateRoute
+  '/dashboard/training/$trainingId': typeof DashboardTrainingTrainingIdRouteWithChildren
+  '/dashboard/training/create': typeof DashboardTrainingCreateRoute
+  '/dashboard/workouts/$workoutId': typeof DashboardWorkoutsWorkoutIdRouteWithChildren
+  '/dashboard/workouts/create': typeof DashboardWorkoutsCreateRoute
+  '/dashboard/players/$playerId/edit': typeof DashboardPlayersPlayerIdEditRoute
+  '/dashboard/tournaments/$tournamentId/edit': typeof DashboardTournamentsTournamentIdEditRoute
+  '/dashboard/training/$trainingId/edit': typeof DashboardTrainingTrainingIdEditRoute
+  '/dashboard/workouts/$workoutId/edit': typeof DashboardWorkoutsWorkoutIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -338,14 +439,14 @@ export interface FileRoutesByTo {
   '/dashboard/gallery': typeof DashboardGalleryRoute
   '/dashboard/injuries': typeof DashboardInjuriesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
-  '/dashboard/players': typeof DashboardPlayersRoute
+  '/dashboard/players': typeof DashboardPlayersRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/submissions': typeof DashboardSubmissionsRoute
-  '/dashboard/team-lineup': typeof DashboardTeamLineupRoute
-  '/dashboard/tournaments': typeof DashboardTournamentsRoute
-  '/dashboard/training': typeof DashboardTrainingRoute
-  '/dashboard/workouts': typeof DashboardWorkoutsRoute
+  '/dashboard/team-lineup': typeof DashboardTeamLineupRouteWithChildren
+  '/dashboard/tournaments': typeof DashboardTournamentsRouteWithChildren
+  '/dashboard/training': typeof DashboardTrainingRouteWithChildren
+  '/dashboard/workouts': typeof DashboardWorkoutsRouteWithChildren
   '/player/attendance': typeof PlayerAttendanceRoute
   '/player/dashboard': typeof PlayerDashboardRoute
   '/player/fitness': typeof PlayerFitnessRoute
@@ -360,6 +461,19 @@ export interface FileRoutesByTo {
   '/player/workouts': typeof PlayerWorkoutsRoute
   '/dashboard': typeof DashboardIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/dashboard/players/$playerId': typeof DashboardPlayersPlayerIdRouteWithChildren
+  '/dashboard/players/create': typeof DashboardPlayersCreateRoute
+  '/dashboard/team-lineup/create': typeof DashboardTeamLineupCreateRoute
+  '/dashboard/tournaments/$tournamentId': typeof DashboardTournamentsTournamentIdRouteWithChildren
+  '/dashboard/tournaments/create': typeof DashboardTournamentsCreateRoute
+  '/dashboard/training/$trainingId': typeof DashboardTrainingTrainingIdRouteWithChildren
+  '/dashboard/training/create': typeof DashboardTrainingCreateRoute
+  '/dashboard/workouts/$workoutId': typeof DashboardWorkoutsWorkoutIdRouteWithChildren
+  '/dashboard/workouts/create': typeof DashboardWorkoutsCreateRoute
+  '/dashboard/players/$playerId/edit': typeof DashboardPlayersPlayerIdEditRoute
+  '/dashboard/tournaments/$tournamentId/edit': typeof DashboardTournamentsTournamentIdEditRoute
+  '/dashboard/training/$trainingId/edit': typeof DashboardTrainingTrainingIdEditRoute
+  '/dashboard/workouts/$workoutId/edit': typeof DashboardWorkoutsWorkoutIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -384,14 +498,14 @@ export interface FileRoutesById {
   '/dashboard/gallery': typeof DashboardGalleryRoute
   '/dashboard/injuries': typeof DashboardInjuriesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
-  '/dashboard/players': typeof DashboardPlayersRoute
+  '/dashboard/players': typeof DashboardPlayersRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/submissions': typeof DashboardSubmissionsRoute
-  '/dashboard/team-lineup': typeof DashboardTeamLineupRoute
-  '/dashboard/tournaments': typeof DashboardTournamentsRoute
-  '/dashboard/training': typeof DashboardTrainingRoute
-  '/dashboard/workouts': typeof DashboardWorkoutsRoute
+  '/dashboard/team-lineup': typeof DashboardTeamLineupRouteWithChildren
+  '/dashboard/tournaments': typeof DashboardTournamentsRouteWithChildren
+  '/dashboard/training': typeof DashboardTrainingRouteWithChildren
+  '/dashboard/workouts': typeof DashboardWorkoutsRouteWithChildren
   '/player/attendance': typeof PlayerAttendanceRoute
   '/player/dashboard': typeof PlayerDashboardRoute
   '/player/fitness': typeof PlayerFitnessRoute
@@ -406,6 +520,19 @@ export interface FileRoutesById {
   '/player/workouts': typeof PlayerWorkoutsRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/dashboard/players/$playerId': typeof DashboardPlayersPlayerIdRouteWithChildren
+  '/dashboard/players/create': typeof DashboardPlayersCreateRoute
+  '/dashboard/team-lineup/create': typeof DashboardTeamLineupCreateRoute
+  '/dashboard/tournaments/$tournamentId': typeof DashboardTournamentsTournamentIdRouteWithChildren
+  '/dashboard/tournaments/create': typeof DashboardTournamentsCreateRoute
+  '/dashboard/training/$trainingId': typeof DashboardTrainingTrainingIdRouteWithChildren
+  '/dashboard/training/create': typeof DashboardTrainingCreateRoute
+  '/dashboard/workouts/$workoutId': typeof DashboardWorkoutsWorkoutIdRouteWithChildren
+  '/dashboard/workouts/create': typeof DashboardWorkoutsCreateRoute
+  '/dashboard/players/$playerId/edit': typeof DashboardPlayersPlayerIdEditRoute
+  '/dashboard/tournaments/$tournamentId/edit': typeof DashboardTournamentsTournamentIdEditRoute
+  '/dashboard/training/$trainingId/edit': typeof DashboardTrainingTrainingIdEditRoute
+  '/dashboard/workouts/$workoutId/edit': typeof DashboardWorkoutsWorkoutIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -453,6 +580,19 @@ export interface FileRouteTypes {
     | '/player/workouts'
     | '/dashboard/'
     | '/.mcp/invoke-tool/$tool'
+    | '/dashboard/players/$playerId'
+    | '/dashboard/players/create'
+    | '/dashboard/team-lineup/create'
+    | '/dashboard/tournaments/$tournamentId'
+    | '/dashboard/tournaments/create'
+    | '/dashboard/training/$trainingId'
+    | '/dashboard/training/create'
+    | '/dashboard/workouts/$workoutId'
+    | '/dashboard/workouts/create'
+    | '/dashboard/players/$playerId/edit'
+    | '/dashboard/tournaments/$tournamentId/edit'
+    | '/dashboard/training/$trainingId/edit'
+    | '/dashboard/workouts/$workoutId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -497,6 +637,19 @@ export interface FileRouteTypes {
     | '/player/workouts'
     | '/dashboard'
     | '/.mcp/invoke-tool/$tool'
+    | '/dashboard/players/$playerId'
+    | '/dashboard/players/create'
+    | '/dashboard/team-lineup/create'
+    | '/dashboard/tournaments/$tournamentId'
+    | '/dashboard/tournaments/create'
+    | '/dashboard/training/$trainingId'
+    | '/dashboard/training/create'
+    | '/dashboard/workouts/$workoutId'
+    | '/dashboard/workouts/create'
+    | '/dashboard/players/$playerId/edit'
+    | '/dashboard/tournaments/$tournamentId/edit'
+    | '/dashboard/training/$trainingId/edit'
+    | '/dashboard/workouts/$workoutId/edit'
   id:
     | '__root__'
     | '/'
@@ -542,6 +695,19 @@ export interface FileRouteTypes {
     | '/player/workouts'
     | '/dashboard/'
     | '/.mcp/invoke-tool/$tool'
+    | '/dashboard/players/$playerId'
+    | '/dashboard/players/create'
+    | '/dashboard/team-lineup/create'
+    | '/dashboard/tournaments/$tournamentId'
+    | '/dashboard/tournaments/create'
+    | '/dashboard/training/$trainingId'
+    | '/dashboard/training/create'
+    | '/dashboard/workouts/$workoutId'
+    | '/dashboard/workouts/create'
+    | '/dashboard/players/$playerId/edit'
+    | '/dashboard/tournaments/$tournamentId/edit'
+    | '/dashboard/training/$trainingId/edit'
+    | '/dashboard/workouts/$workoutId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -858,6 +1024,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/workouts/create': {
+      id: '/dashboard/workouts/create'
+      path: '/create'
+      fullPath: '/dashboard/workouts/create'
+      preLoaderRoute: typeof DashboardWorkoutsCreateRouteImport
+      parentRoute: typeof DashboardWorkoutsRoute
+    }
+    '/dashboard/workouts/$workoutId': {
+      id: '/dashboard/workouts/$workoutId'
+      path: '/$workoutId'
+      fullPath: '/dashboard/workouts/$workoutId'
+      preLoaderRoute: typeof DashboardWorkoutsWorkoutIdRouteImport
+      parentRoute: typeof DashboardWorkoutsRoute
+    }
+    '/dashboard/training/create': {
+      id: '/dashboard/training/create'
+      path: '/create'
+      fullPath: '/dashboard/training/create'
+      preLoaderRoute: typeof DashboardTrainingCreateRouteImport
+      parentRoute: typeof DashboardTrainingRoute
+    }
+    '/dashboard/training/$trainingId': {
+      id: '/dashboard/training/$trainingId'
+      path: '/$trainingId'
+      fullPath: '/dashboard/training/$trainingId'
+      preLoaderRoute: typeof DashboardTrainingTrainingIdRouteImport
+      parentRoute: typeof DashboardTrainingRoute
+    }
+    '/dashboard/tournaments/create': {
+      id: '/dashboard/tournaments/create'
+      path: '/create'
+      fullPath: '/dashboard/tournaments/create'
+      preLoaderRoute: typeof DashboardTournamentsCreateRouteImport
+      parentRoute: typeof DashboardTournamentsRoute
+    }
+    '/dashboard/tournaments/$tournamentId': {
+      id: '/dashboard/tournaments/$tournamentId'
+      path: '/$tournamentId'
+      fullPath: '/dashboard/tournaments/$tournamentId'
+      preLoaderRoute: typeof DashboardTournamentsTournamentIdRouteImport
+      parentRoute: typeof DashboardTournamentsRoute
+    }
+    '/dashboard/team-lineup/create': {
+      id: '/dashboard/team-lineup/create'
+      path: '/create'
+      fullPath: '/dashboard/team-lineup/create'
+      preLoaderRoute: typeof DashboardTeamLineupCreateRouteImport
+      parentRoute: typeof DashboardTeamLineupRoute
+    }
+    '/dashboard/players/create': {
+      id: '/dashboard/players/create'
+      path: '/create'
+      fullPath: '/dashboard/players/create'
+      preLoaderRoute: typeof DashboardPlayersCreateRouteImport
+      parentRoute: typeof DashboardPlayersRoute
+    }
+    '/dashboard/players/$playerId': {
+      id: '/dashboard/players/$playerId'
+      path: '/$playerId'
+      fullPath: '/dashboard/players/$playerId'
+      preLoaderRoute: typeof DashboardPlayersPlayerIdRouteImport
+      parentRoute: typeof DashboardPlayersRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -865,8 +1094,158 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/workouts/$workoutId/edit': {
+      id: '/dashboard/workouts/$workoutId/edit'
+      path: '/edit'
+      fullPath: '/dashboard/workouts/$workoutId/edit'
+      preLoaderRoute: typeof DashboardWorkoutsWorkoutIdEditRouteImport
+      parentRoute: typeof DashboardWorkoutsWorkoutIdRoute
+    }
+    '/dashboard/training/$trainingId/edit': {
+      id: '/dashboard/training/$trainingId/edit'
+      path: '/edit'
+      fullPath: '/dashboard/training/$trainingId/edit'
+      preLoaderRoute: typeof DashboardTrainingTrainingIdEditRouteImport
+      parentRoute: typeof DashboardTrainingTrainingIdRoute
+    }
+    '/dashboard/tournaments/$tournamentId/edit': {
+      id: '/dashboard/tournaments/$tournamentId/edit'
+      path: '/edit'
+      fullPath: '/dashboard/tournaments/$tournamentId/edit'
+      preLoaderRoute: typeof DashboardTournamentsTournamentIdEditRouteImport
+      parentRoute: typeof DashboardTournamentsTournamentIdRoute
+    }
+    '/dashboard/players/$playerId/edit': {
+      id: '/dashboard/players/$playerId/edit'
+      path: '/edit'
+      fullPath: '/dashboard/players/$playerId/edit'
+      preLoaderRoute: typeof DashboardPlayersPlayerIdEditRouteImport
+      parentRoute: typeof DashboardPlayersPlayerIdRoute
+    }
   }
 }
+
+interface DashboardPlayersPlayerIdRouteChildren {
+  DashboardPlayersPlayerIdEditRoute: typeof DashboardPlayersPlayerIdEditRoute
+}
+
+const DashboardPlayersPlayerIdRouteChildren: DashboardPlayersPlayerIdRouteChildren =
+  {
+    DashboardPlayersPlayerIdEditRoute: DashboardPlayersPlayerIdEditRoute,
+  }
+
+const DashboardPlayersPlayerIdRouteWithChildren =
+  DashboardPlayersPlayerIdRoute._addFileChildren(
+    DashboardPlayersPlayerIdRouteChildren,
+  )
+
+interface DashboardPlayersRouteChildren {
+  DashboardPlayersPlayerIdRoute: typeof DashboardPlayersPlayerIdRouteWithChildren
+  DashboardPlayersCreateRoute: typeof DashboardPlayersCreateRoute
+}
+
+const DashboardPlayersRouteChildren: DashboardPlayersRouteChildren = {
+  DashboardPlayersPlayerIdRoute: DashboardPlayersPlayerIdRouteWithChildren,
+  DashboardPlayersCreateRoute: DashboardPlayersCreateRoute,
+}
+
+const DashboardPlayersRouteWithChildren =
+  DashboardPlayersRoute._addFileChildren(DashboardPlayersRouteChildren)
+
+interface DashboardTeamLineupRouteChildren {
+  DashboardTeamLineupCreateRoute: typeof DashboardTeamLineupCreateRoute
+}
+
+const DashboardTeamLineupRouteChildren: DashboardTeamLineupRouteChildren = {
+  DashboardTeamLineupCreateRoute: DashboardTeamLineupCreateRoute,
+}
+
+const DashboardTeamLineupRouteWithChildren =
+  DashboardTeamLineupRoute._addFileChildren(DashboardTeamLineupRouteChildren)
+
+interface DashboardTournamentsTournamentIdRouteChildren {
+  DashboardTournamentsTournamentIdEditRoute: typeof DashboardTournamentsTournamentIdEditRoute
+}
+
+const DashboardTournamentsTournamentIdRouteChildren: DashboardTournamentsTournamentIdRouteChildren =
+  {
+    DashboardTournamentsTournamentIdEditRoute:
+      DashboardTournamentsTournamentIdEditRoute,
+  }
+
+const DashboardTournamentsTournamentIdRouteWithChildren =
+  DashboardTournamentsTournamentIdRoute._addFileChildren(
+    DashboardTournamentsTournamentIdRouteChildren,
+  )
+
+interface DashboardTournamentsRouteChildren {
+  DashboardTournamentsTournamentIdRoute: typeof DashboardTournamentsTournamentIdRouteWithChildren
+  DashboardTournamentsCreateRoute: typeof DashboardTournamentsCreateRoute
+}
+
+const DashboardTournamentsRouteChildren: DashboardTournamentsRouteChildren = {
+  DashboardTournamentsTournamentIdRoute:
+    DashboardTournamentsTournamentIdRouteWithChildren,
+  DashboardTournamentsCreateRoute: DashboardTournamentsCreateRoute,
+}
+
+const DashboardTournamentsRouteWithChildren =
+  DashboardTournamentsRoute._addFileChildren(DashboardTournamentsRouteChildren)
+
+interface DashboardTrainingTrainingIdRouteChildren {
+  DashboardTrainingTrainingIdEditRoute: typeof DashboardTrainingTrainingIdEditRoute
+}
+
+const DashboardTrainingTrainingIdRouteChildren: DashboardTrainingTrainingIdRouteChildren =
+  {
+    DashboardTrainingTrainingIdEditRoute: DashboardTrainingTrainingIdEditRoute,
+  }
+
+const DashboardTrainingTrainingIdRouteWithChildren =
+  DashboardTrainingTrainingIdRoute._addFileChildren(
+    DashboardTrainingTrainingIdRouteChildren,
+  )
+
+interface DashboardTrainingRouteChildren {
+  DashboardTrainingTrainingIdRoute: typeof DashboardTrainingTrainingIdRouteWithChildren
+  DashboardTrainingCreateRoute: typeof DashboardTrainingCreateRoute
+}
+
+const DashboardTrainingRouteChildren: DashboardTrainingRouteChildren = {
+  DashboardTrainingTrainingIdRoute:
+    DashboardTrainingTrainingIdRouteWithChildren,
+  DashboardTrainingCreateRoute: DashboardTrainingCreateRoute,
+}
+
+const DashboardTrainingRouteWithChildren =
+  DashboardTrainingRoute._addFileChildren(DashboardTrainingRouteChildren)
+
+interface DashboardWorkoutsWorkoutIdRouteChildren {
+  DashboardWorkoutsWorkoutIdEditRoute: typeof DashboardWorkoutsWorkoutIdEditRoute
+}
+
+const DashboardWorkoutsWorkoutIdRouteChildren: DashboardWorkoutsWorkoutIdRouteChildren =
+  {
+    DashboardWorkoutsWorkoutIdEditRoute: DashboardWorkoutsWorkoutIdEditRoute,
+  }
+
+const DashboardWorkoutsWorkoutIdRouteWithChildren =
+  DashboardWorkoutsWorkoutIdRoute._addFileChildren(
+    DashboardWorkoutsWorkoutIdRouteChildren,
+  )
+
+interface DashboardWorkoutsRouteChildren {
+  DashboardWorkoutsWorkoutIdRoute: typeof DashboardWorkoutsWorkoutIdRouteWithChildren
+  DashboardWorkoutsCreateRoute: typeof DashboardWorkoutsCreateRoute
+}
+
+const DashboardWorkoutsRouteChildren: DashboardWorkoutsRouteChildren = {
+  DashboardWorkoutsWorkoutIdRoute: DashboardWorkoutsWorkoutIdRouteWithChildren,
+  DashboardWorkoutsCreateRoute: DashboardWorkoutsCreateRoute,
+}
+
+const DashboardWorkoutsRouteWithChildren =
+  DashboardWorkoutsRoute._addFileChildren(DashboardWorkoutsRouteChildren)
 
 interface DashboardRouteChildren {
   DashboardAchievementsRoute: typeof DashboardAchievementsRoute
@@ -876,14 +1255,14 @@ interface DashboardRouteChildren {
   DashboardGalleryRoute: typeof DashboardGalleryRoute
   DashboardInjuriesRoute: typeof DashboardInjuriesRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
-  DashboardPlayersRoute: typeof DashboardPlayersRoute
+  DashboardPlayersRoute: typeof DashboardPlayersRouteWithChildren
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStatsRoute: typeof DashboardStatsRoute
   DashboardSubmissionsRoute: typeof DashboardSubmissionsRoute
-  DashboardTeamLineupRoute: typeof DashboardTeamLineupRoute
-  DashboardTournamentsRoute: typeof DashboardTournamentsRoute
-  DashboardTrainingRoute: typeof DashboardTrainingRoute
-  DashboardWorkoutsRoute: typeof DashboardWorkoutsRoute
+  DashboardTeamLineupRoute: typeof DashboardTeamLineupRouteWithChildren
+  DashboardTournamentsRoute: typeof DashboardTournamentsRouteWithChildren
+  DashboardTrainingRoute: typeof DashboardTrainingRouteWithChildren
+  DashboardWorkoutsRoute: typeof DashboardWorkoutsRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
@@ -895,14 +1274,14 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardGalleryRoute: DashboardGalleryRoute,
   DashboardInjuriesRoute: DashboardInjuriesRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
-  DashboardPlayersRoute: DashboardPlayersRoute,
+  DashboardPlayersRoute: DashboardPlayersRouteWithChildren,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStatsRoute: DashboardStatsRoute,
   DashboardSubmissionsRoute: DashboardSubmissionsRoute,
-  DashboardTeamLineupRoute: DashboardTeamLineupRoute,
-  DashboardTournamentsRoute: DashboardTournamentsRoute,
-  DashboardTrainingRoute: DashboardTrainingRoute,
-  DashboardWorkoutsRoute: DashboardWorkoutsRoute,
+  DashboardTeamLineupRoute: DashboardTeamLineupRouteWithChildren,
+  DashboardTournamentsRoute: DashboardTournamentsRouteWithChildren,
+  DashboardTrainingRoute: DashboardTrainingRouteWithChildren,
+  DashboardWorkoutsRoute: DashboardWorkoutsRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 

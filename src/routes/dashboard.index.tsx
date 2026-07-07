@@ -26,7 +26,7 @@ import {
   Bar,
   YAxis,
 } from "recharts";
-import { attendanceTrend, players, trainings, notifications, workoutPlan } from "@/data/mockData";
+import { useAppData } from "@/hooks/useAppData";
 
 export const Route = createFileRoute("/dashboard/")({
   head: () => ({
@@ -36,9 +36,18 @@ export const Route = createFileRoute("/dashboard/")({
 });
 
 function CoachDashboard() {
+  const { data } = useAppData();
+  const { players, notifications } = data;
+  const workoutPlan = data.workoutPlans[0];
+  const workoutTasks = data.workoutTasks.filter((task) => task.planId === workoutPlan?.id);
   const topScorers = [...players].sort((a, b) => b.score - a.score).slice(0, 5);
-  const upcoming = trainings.filter((t) => t.status === "Upcoming");
+  const upcoming = data.trainingSessions.filter((t) => t.status === "Upcoming");
   const activeInjuries = players.filter((p) => p.injury === "Active").length;
+  const attendanceTrend = data.trainingSessions.slice(0, 7).map((training, index) => {
+    const records = data.attendanceRecords.filter((record) => record.trainingId === training.id);
+    const going = records.filter((record) => record.response === "Going" || record.coachStatus === "Attended").length;
+    return { week: `S${index + 1}`, pct: records.length ? Math.round((going / records.length) * 100) : 0 };
+  });
 
   return (
     <DashboardLayout title="Overview">
@@ -75,12 +84,13 @@ function CoachDashboard() {
 
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
           {[
-            { label: "Create Training", icon: CalendarDays },
-            { label: "Assign Workout", icon: Dumbbell },
-            { label: "Add Tournament", icon: Trophy },
+            { label: "Create Training", icon: CalendarDays, to: "/dashboard/training/create" },
+            { label: "Assign Workout", icon: Dumbbell, to: "/dashboard/workouts/create" },
+            { label: "Add Tournament", icon: Trophy, to: "/dashboard/tournaments/create" },
           ].map((a) => (
-            <button
+            <Link
               key={a.label}
+              to={a.to}
               className="panel group flex min-h-24 items-center justify-between p-4 text-left"
             >
               <span>
@@ -90,7 +100,7 @@ function CoachDashboard() {
               <span className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-silver-muted group-hover:border-cyan/30 group-hover:text-cyan">
                 <ArrowUpRight className="h-4 w-4" />
               </span>
-            </button>
+            </Link>
           ))}
         </div>
       </section>
@@ -197,16 +207,23 @@ function CoachDashboard() {
               <div className="text-xs font-semibold text-silver-muted">Upcoming</div>
               <div className="mt-1 text-xl font-black">Training sessions</div>
             </div>
-            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground glow-cyan">
+            <Link
+              to="/dashboard/training/create"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground glow-cyan"
+            >
               <Plus className="h-4 w-4" />
               New session
-            </button>
+            </Link>
           </div>
 
           <div className="space-y-3">
-            {upcoming.map((t) => (
-              <article
+            {upcoming.map((t) => {
+              const records = data.attendanceRecords.filter((record) => record.trainingId === t.id);
+              return (
+              <Link
                 key={t.id}
+                to="/dashboard/training/$trainingId"
+                params={{ trainingId: t.id }}
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -224,13 +241,14 @@ function CoachDashboard() {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
-                    <MiniCount label="In" value={t.attendance?.going ?? 0} tone="text-success" />
-                    <MiniCount label="Maybe" value={t.attendance?.maybe ?? 0} tone="text-warning" />
-                    <MiniCount label="Out" value={t.attendance?.out ?? 0} tone="text-destructive" />
+                    <MiniCount label="In" value={records.filter((record) => record.response === "Going").length} tone="text-success" />
+                    <MiniCount label="Maybe" value={records.filter((record) => record.response === "Maybe").length} tone="text-warning" />
+                    <MiniCount label="Out" value={records.filter((record) => record.response === "Out").length} tone="text-destructive" />
                   </div>
                 </div>
-              </article>
-            ))}
+              </Link>
+              );
+            })}
           </div>
         </div>
 
@@ -265,12 +283,12 @@ function CoachDashboard() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs font-semibold text-silver-muted">Workout plan</div>
-              <div className="mt-1 text-xl font-black">{workoutPlan.title}</div>
+              <div className="mt-1 text-xl font-black">{workoutPlan?.title ?? "No active plan"}</div>
             </div>
-            <StatusBadge tone="cyan">{workoutPlan.status}</StatusBadge>
+            <StatusBadge tone="cyan">{workoutPlan?.status ?? "Draft"}</StatusBadge>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {workoutPlan.tasks.map((t) => (
+            {workoutTasks.map((t) => (
               <article
                 key={t.id}
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"
@@ -282,7 +300,7 @@ function CoachDashboard() {
                 <div className="mt-3 h-1.5 rounded-full bg-white/10">
                   <div
                     className="h-full rounded-full bg-cyan"
-                    style={{ width: t.done ? "100%" : "35%" }}
+                    style={{ width: data.workoutSubmissions.some((submission) => submission.taskId === t.id) ? "100%" : "35%" }}
                   />
                 </div>
               </article>

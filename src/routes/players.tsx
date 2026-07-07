@@ -1,46 +1,57 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { PlayerAvatar } from "@/components/ym/Avatar";
-import { players } from "@/data/mockData";
+import { useAppData } from "@/hooks/useAppData";
 
 export const Route = createFileRoute("/players")({
-  head: () => ({ meta: [
-    { title: "Players · Young Machine" },
-    { name: "description", content: "Meet the Young Machine roster — handlers, cutters, and hybrids." },
-  ]}),
+  head: () => ({
+    meta: [
+      { title: "Players | Young Machine" },
+      { name: "description", content: "Meet the Young Machine roster: handlers, cutters, hybrids, and defenders." },
+    ],
+  }),
   component: PlayersPage,
 });
 
 function PlayersPage() {
-  const publicPlayers = players.filter(p => p.isPublic);
+  const { data } = useAppData();
+  const publicPlayers = data.players.filter((player) => player.isPublic);
   return (
     <PublicLayout>
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="text-xs uppercase tracking-[0.2em] text-cyan">Roster</div>
-        <h1 className="mt-3 text-4xl sm:text-5xl font-bold">The Players</h1>
+      <section className="mx-auto max-w-7xl px-4 pb-8 pt-16 sm:px-6 lg:px-8">
+        <div className="text-xs font-semibold text-cyan">Roster</div>
+        <h1 className="mt-3 text-4xl font-black sm:text-5xl">The Players</h1>
         <p className="mt-3 max-w-2xl text-silver-muted">{publicPlayers.length} athletes wearing the YM cyan.</p>
       </section>
-
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {publicPlayers.map((p) => (
-          <div key={p.id} className="panel panel-hover p-5">
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8 xl:grid-cols-4">
+        {publicPlayers.map((player) => (
+          <div key={player.id} className="panel panel-hover p-5">
             <div className="flex items-center justify-between">
-              <PlayerAvatar name={p.name} hue={p.avatarHue} size={64} />
-              <div className="text-4xl font-bold text-cyan/70">#{p.jersey}</div>
+              <PlayerAvatar name={player.name} hue={player.avatarHue} size={64} />
+              <div className="metric-nums text-4xl font-black text-cyan/70">#{player.jersey}</div>
             </div>
             <div className="mt-4">
-              <div className="text-lg font-semibold">{p.name}</div>
-              <div className="text-xs text-silver-muted uppercase tracking-widest">{p.position}</div>
+              <div className="text-lg font-bold">{player.name}</div>
+              <div className="text-xs font-semibold text-silver-muted">{player.position}</div>
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-2 text-center border-t border-white/5 pt-4">
-              <div><div className="text-sm font-bold text-foreground">{p.score}</div><div className="text-[10px] text-silver-muted">SCR</div></div>
-              <div><div className="text-sm font-bold text-foreground">{p.assist}</div><div className="text-[10px] text-silver-muted">AST</div></div>
-              <div><div className="text-sm font-bold text-foreground">{p.blocks}</div><div className="text-[10px] text-silver-muted">BLK</div></div>
-              <div><div className="text-sm font-bold text-foreground">{p.attendance}%</div><div className="text-[10px] text-silver-muted">ATT</div></div>
+            <div className="mt-4 grid grid-cols-4 gap-2 border-t border-white/10 pt-4 text-center">
+              <Mini label="SCR" value={player.score} />
+              <Mini label="AST" value={player.assist} />
+              <Mini label="BLK" value={player.blocks} />
+              <Mini label="ATT" value={`${player.attendance}%`} />
             </div>
           </div>
         ))}
       </section>
     </PublicLayout>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div>
+      <div className="metric-nums text-sm font-bold text-foreground">{value}</div>
+      <div className="text-[10px] text-silver-muted">{label}</div>
+    </div>
   );
 }

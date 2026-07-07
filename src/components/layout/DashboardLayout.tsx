@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   Award,
@@ -25,6 +25,7 @@ import {
 import { YMLogo } from "@/components/ym/Logo";
 import { PlayerAvatar } from "@/components/ym/Avatar";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const groups = [
   {
@@ -71,6 +72,8 @@ const groups = [
 export function DashboardLayout({ title, children }: { title?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   const SidebarBody = (
     <div className="flex h-full flex-col">
@@ -149,12 +152,21 @@ export function DashboardLayout({ title, children }: { title?: string; children:
       <div className="border-t border-white/10 p-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
           <div className="flex items-center gap-3">
-            <PlayerAvatar name="Capang" hue={200} size={38} />
+            <PlayerAvatar name={currentUser?.name ?? "Capang"} hue={200} size={38} />
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">Capang</div>
-              <div className="text-[11px] text-silver-muted">Head Coach</div>
+              <div className="truncate text-sm font-semibold">{currentUser?.name ?? "Capang"}</div>
+              <div className="text-[11px] text-silver-muted">{currentUser?.role === "manager" ? "Team Manager" : "Head Coach"}</div>
             </div>
           </div>
+          <button
+            onClick={() => {
+              logout();
+              navigate({ to: "/login" });
+            }}
+            className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.035] py-2 text-xs font-semibold text-silver hover:border-destructive/40 hover:text-destructive"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>
@@ -211,10 +223,13 @@ export function DashboardLayout({ title, children }: { title?: string; children:
                   placeholder="Search roster, drills, matches"
                 />
               </label>
-              <button className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground glow-cyan sm:inline-flex">
+              <Link
+                to="/dashboard/training/create"
+                className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground glow-cyan sm:inline-flex"
+              >
                 <Plus className="h-4 w-4" />
                 <span>New session</span>
-              </button>
+              </Link>
               <button
                 className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.045]"
                 aria-label="Notifications"
@@ -223,7 +238,7 @@ export function DashboardLayout({ title, children }: { title?: string; children:
                 <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan shadow-[0_0_14px_var(--cyan)]" />
               </button>
               <div className="hidden sm:block">
-                <PlayerAvatar name="Capang" hue={200} size={40} />
+                <PlayerAvatar name={currentUser?.name ?? "Capang"} hue={200} size={40} />
               </div>
             </div>
           </div>
@@ -231,12 +246,13 @@ export function DashboardLayout({ title, children }: { title?: string; children:
 
         <main className="ym-container px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-8">{children}</main>
 
-        <button
+        <Link
+          to="/dashboard/training/create"
           className="fixed bottom-5 right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground glow-cyan lg:hidden"
           aria-label="Create new item"
         >
           <Plus className="h-6 w-6" />
-        </button>
+        </Link>
       </div>
     </div>
   );
