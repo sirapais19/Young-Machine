@@ -10,24 +10,25 @@ export const Route = createFileRoute("/login")({
 });
 
 const demos = [
-  { label: "Coach Capang", email: "capang@gmail.com", password: "capang1234" },
-  { label: "Manager Aina", email: "aina@gmail.com", password: "aina1234" },
-  { label: "Player Aidit", email: "aidit@gmail.com", password: "Player1234" },
-  { label: "Player Abu", email: "abu@gmail.com", password: "Player1234" },
-  { label: "Player Ali", email: "ali@gmail.com", password: "Player1234" },
+  { label: "Coach", email: "coach@youngmachine.club" },
+  { label: "Manager", email: "manager@youngmachine.club" },
+  { label: "Player", email: "player@youngmachine.club" },
 ];
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [email, setEmail] = useState("capang@gmail.com");
-  const [password, setPassword] = useState("capang1234");
+  const { login, isLoadingAuth } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const result = login(email, password);
+    setIsSubmitting(true);
+    const result = await login(email, password);
+    setIsSubmitting(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -93,20 +94,19 @@ function LoginPage() {
               </div>
             </div>
             {error && <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
-            <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground glow-cyan">
-              Sign in <ArrowRight className="h-4 w-4" />
+            <button disabled={isSubmitting || isLoadingAuth} type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground glow-cyan disabled:cursor-not-allowed disabled:opacity-60">
+              {isSubmitting ? "Signing in..." : "Sign in"} <ArrowRight className="h-4 w-4" />
             </button>
           </form>
 
           <div className="mt-6 grid gap-2 text-xs">
-            <div className="text-silver-muted">Quick demo accounts</div>
+            <div className="text-silver-muted">Known account emails</div>
             <div className="grid gap-2 sm:grid-cols-2">
               {demos.map((demo) => (
                 <button
                   key={demo.email}
                   onClick={() => {
                     setEmail(demo.email);
-                    setPassword(demo.password);
                     setError("");
                   }}
                   className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-left hover:border-cyan/40"

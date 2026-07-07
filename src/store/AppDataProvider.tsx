@@ -1,5 +1,40 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { createId, initialData } from "@/data/initialData";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  achievementPayload,
+  emptyAppData,
+  fitnessPayload,
+  fromAttendanceStatus,
+  fromTournamentRole,
+  galleryPayload,
+  injuryPayload,
+  mapAchievement,
+  mapAttendance,
+  mapClubPage,
+  mapFitnessRecord,
+  mapGallery,
+  mapGalleryImage,
+  mapInjuryRecord,
+  mapLineups,
+  mapNotification,
+  mapPlayers,
+  mapTournament,
+  mapTournamentPlayer,
+  mapTournamentStats,
+  mapTrainingSession,
+  mapWorkoutAssignment,
+  mapWorkoutPlan,
+  mapWorkoutSubmission,
+  mapWorkoutTask,
+  tournamentPayload,
+  tournamentStatsPayload,
+  trainingPayload,
+  workoutPlanPayload,
+  workoutTaskPayload,
+} from "@/services/mappers";
 import type {
   Achievement,
   AppData,
@@ -20,13 +55,35 @@ import type {
   WorkoutSubmission,
   WorkoutTask,
 } from "@/types/app";
-
-const STORAGE_KEY = "ym-app-data-v1";
+import type {
+  AchievementRow,
+  ClubPageRow,
+  FitnessRecordRow,
+  GalleryImageRow,
+  GalleryRow,
+  InjuryRecordRow,
+  NotificationRow,
+  PlayerWithProfileRow,
+  ProfileRow,
+  TeamLineupPlayerRow,
+  TeamLineupRow,
+  TournamentPlayerRow,
+  TournamentPlayerStatsRow,
+  TournamentRow,
+  TrainingAttendanceRow,
+  TrainingSessionRow,
+  WorkoutAssignmentRow,
+  WorkoutPlanRow,
+  WorkoutSubmissionRow,
+  WorkoutTaskRow,
+} from "@/types/supabase";
 
 type UpdateInput<T extends { id: string }> = Partial<T> & { id: string };
 
 export interface AppDataContextValue {
   data: AppData;
+  isLoadingData: boolean;
+  refreshData: () => Promise<void>;
   resetData: () => void;
   addPlayer: (player: Omit<Player, "id" | "attendance" | "score" | "assist" | "blocks" | "turnovers" | "avatarHue">) => Player;
   updatePlayer: (player: UpdateInput<Player>) => void;
@@ -82,454 +139,556 @@ export interface AppDataContextValue {
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);
 
-function loadData(): AppData {
-  if (typeof window === "undefined") return initialData;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return initialData;
-  try {
-    return { ...initialData, ...JSON.parse(raw) };
-  } catch {
-    return initialData;
+const makeId = (prefix: string) => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return createId(prefix);
+};
+
+async function selectTable<T>(table: string, query = "*"): Promise<T[]> {
+  const { data, error } = await supabase.from(table).select(query);
+  if (error) {
+    console.error(`Supabase read failed: ${table}`, error);
+    toast.error(`Unable to load ${table.replaceAll("_", " ")}.`);
+    return [];
   }
+  return (data ?? []) as T[];
 }
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(loadData);
+  const { currentUser, isLoadingAuth } = useAuth();
+  const [data, setData] = useState<AppData>(hasSupabaseEnv ? emptyAppData() : initialData);
+  const [isLoadingData, setIsLoadingData] = useState(hasSupabaseEnv);
+
+  const refreshData = useCallback(async () => {
+    if (!hasSupabaseEnv) {
+      setData(initialData);
+      setIsLoadingData(false);
+      return;
+    }
+
+    setIsLoadingData(true);
+    try {
+      const publicOnly = !currentUser;
+      const playerQuery = publicOnly ? "*, profiles(*)" : "*, profiles(*)";
+      const playersRequest = publicOnly
+        ? supabase.from("players").select(playerQuery).eq("is_public_profile", true)
+        : supabase.from("players").select(playerQuery);
+
+      const [
+        playersResult,
+        trainingRows,
+        attendanceRows,
+        notificationRows,
+        workoutPlanRows,
+        workoutTaskRows,
+        workoutAssignmentRows,
+        workoutSubmissionRows,
+        tournamentRowsRaw,
+        tournamentPlayerRows,
+        tournamentStatsRows,
+        lineupRows,
+        lineupPlayerRows,
+        fitnessRows,
+        injuryRows,
+        clubPageRowsRaw,
+        achievementRowsRaw,
+        galleryRowsRaw,
+        galleryImageRows,
+      ] = await Promise.all([
+        playersRequest,
+        publicOnly ? Promise.resolve([] as TrainingSessionRow[]) : selectTable<TrainingSessionRow>("training_sessions"),
+        publicOnly ? Promise.resolve([] as TrainingAttendanceRow[]) : selectTable<TrainingAttendanceRow>("training_attendance"),
+        publicOnly ? Promise.resolve([] as NotificationRow[]) : selectTable<NotificationRow>("notifications"),
+        publicOnly ? Promise.resolve([] as WorkoutPlanRow[]) : selectTable<WorkoutPlanRow>("workout_plans"),
+        publicOnly ? Promise.resolve([] as WorkoutTaskRow[]) : selectTable<WorkoutTaskRow>("workout_tasks"),
+        publicOnly ? Promise.resolve([] as WorkoutAssignmentRow[]) : selectTable<WorkoutAssignmentRow>("workout_assignments"),
+        publicOnly ? Promise.resolve([] as WorkoutSubmissionRow[]) : selectTable<WorkoutSubmissionRow>("workout_task_submissions"),
+        selectTable<TournamentRow>("tournaments"),
+        publicOnly ? Promise.resolve([] as TournamentPlayerRow[]) : selectTable<TournamentPlayerRow>("tournament_players"),
+        publicOnly ? Promise.resolve([] as TournamentPlayerStatsRow[]) : selectTable<TournamentPlayerStatsRow>("tournament_player_stats"),
+        publicOnly ? Promise.resolve([] as TeamLineupRow[]) : selectTable<TeamLineupRow>("team_lineups"),
+        publicOnly ? Promise.resolve([] as TeamLineupPlayerRow[]) : selectTable<TeamLineupPlayerRow>("team_lineup_players"),
+        publicOnly ? Promise.resolve([] as FitnessRecordRow[]) : selectTable<FitnessRecordRow>("fitness_records"),
+        publicOnly ? Promise.resolve([] as InjuryRecordRow[]) : selectTable<InjuryRecordRow>("injury_records"),
+        selectTable<ClubPageRow>("club_pages"),
+        selectTable<AchievementRow>("achievements"),
+        selectTable<GalleryRow>("galleries"),
+        selectTable<GalleryImageRow>("gallery_images"),
+      ]);
+
+      if (playersResult.error) throw playersResult.error;
+
+      const tournamentRows = publicOnly ? tournamentRowsRaw.filter((row) => row.status === "upcoming" || row.status === "completed") : tournamentRowsRaw;
+      const clubPageRows = publicOnly ? clubPageRowsRaw.filter((row) => row.status === "published") : clubPageRowsRaw;
+      const achievementRows = publicOnly ? achievementRowsRaw.filter((row) => row.status === "published") : achievementRowsRaw;
+      const galleryRows = publicOnly ? galleryRowsRaw.filter((row) => row.status === "published") : galleryRowsRaw;
+      const galleryIds = new Set(galleryRows.map((row) => row.id));
+      const completedTrainingCount = trainingRows.filter((row) => row.status === "completed").length;
+      const taskToPlan = new Map(workoutTaskRows.map((row) => [row.id, row.workout_plan_id]));
+
+      setData({
+        players: mapPlayers((playersResult.data ?? []) as PlayerWithProfileRow[], tournamentStatsRows, attendanceRows, completedTrainingCount),
+        trainingSessions: trainingRows.map(mapTrainingSession),
+        attendanceRecords: attendanceRows.map(mapAttendance),
+        notifications: notificationRows.map(mapNotification),
+        workoutPlans: workoutPlanRows.map(mapWorkoutPlan),
+        workoutTasks: workoutTaskRows.map(mapWorkoutTask),
+        workoutAssignments: workoutAssignmentRows.map(mapWorkoutAssignment),
+        workoutSubmissions: workoutSubmissionRows.map((row) => mapWorkoutSubmission(row, taskToPlan)),
+        tournaments: tournamentRows.map(mapTournament),
+        tournamentPlayers: tournamentPlayerRows.map(mapTournamentPlayer),
+        tournamentStats: tournamentStatsRows.map(mapTournamentStats),
+        teamLineups: mapLineups(lineupRows, lineupPlayerRows),
+        fitnessRecords: fitnessRows.map(mapFitnessRecord),
+        injuryRecords: injuryRows.map(mapInjuryRecord),
+        clubPages: clubPageRows.map(mapClubPage),
+        achievements: achievementRows.map(mapAchievement),
+        galleries: galleryRows.map(mapGallery),
+        galleryImages: galleryImageRows.filter((row) => !publicOnly || galleryIds.has(row.gallery_id)).map(mapGalleryImage),
+      });
+    } catch (error) {
+      console.error("Unable to refresh Supabase data", error);
+      toast.error(error instanceof Error ? error.message : "Unable to refresh Supabase data.");
+      setData((current) => (current.players.length ? current : initialData));
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    if (!isLoadingAuth) void refreshData();
+  }, [isLoadingAuth, refreshData]);
 
-  const mutate = useCallback((updater: (current: AppData) => AppData) => {
-    setData((current) => updater(current));
-  }, []);
-
-  const resetData = useCallback(() => {
-    setData(initialData);
-  }, []);
-
-  const addNotification = useCallback(
-    (notification: Omit<Notification, "id" | "time" | "read">) => {
-      const created: Notification = {
-        ...notification,
-        id: createId("note"),
-        time: "Just now",
-        read: false,
-      };
-      mutate((current) => ({ ...current, notifications: [created, ...current.notifications] }));
-      return created;
+  const runWrite = useCallback(
+    async (label: string, writer: () => Promise<void>) => {
+      if (!hasSupabaseEnv) return;
+      try {
+        await writer();
+        await refreshData();
+      } catch (error) {
+        console.error(label, error);
+        toast.error(error instanceof Error ? error.message : label);
+        await refreshData();
+      }
     },
-    [mutate],
+    [refreshData],
   );
 
   const value = useMemo<AppDataContextValue>(
     () => ({
       data,
-      resetData,
+      isLoadingData,
+      refreshData,
+      resetData: () => void refreshData(),
       addPlayer: (player) => {
-        const created: Player = {
-          ...player,
-          id: createId("p"),
-          attendance: 0,
-          score: 0,
-          assist: 0,
-          blocks: 0,
-          turnovers: 0,
-          avatarHue: 180 + Math.floor(Math.random() * 45),
-        };
-        mutate((current) => ({ ...current, players: [created, ...current.players] }));
+        const created: Player = { ...player, id: makeId("p"), attendance: 0, score: 0, assist: 0, blocks: 0, turnovers: 0, avatarHue: 200 };
+        setData((current) => ({ ...current, players: [created, ...current.players] }));
+        void runWrite("Unable to add player.", async () => {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("id, full_name, email, role, status, avatar_url, created_at, updated_at")
+            .eq("email", player.email)
+            .eq("role", "player")
+            .maybeSingle<ProfileRow>();
+          if (profileError) throw profileError;
+          if (!profile) throw new Error("Create the Supabase Auth player/profile first, then add the player row.");
+
+          await supabase.from("profiles").update({ full_name: player.name, email: player.email }).eq("id", profile.id).throwOnError();
+          await supabase
+            .from("players")
+            .insert({
+              id: created.id,
+              user_id: profile.id,
+              jersey_no: player.jersey,
+              date_of_birth: player.dateOfBirth || null,
+              gender: player.gender ?? null,
+              height_cm: player.height ? Number(player.height) : null,
+              weight_kg: player.weight ? Number(player.weight) : null,
+              position: player.position,
+              dominant_hand: player.hand ?? null,
+              experience_level: player.experience ?? null,
+              profile_photo: player.profileImage ?? null,
+              bio: player.bio ?? null,
+              is_public_profile: player.isPublic,
+            })
+            .throwOnError();
+        });
         return created;
       },
       updatePlayer: (player) => {
-        mutate((current) => ({
-          ...current,
-          players: current.players.map((item) => (item.id === player.id ? { ...item, ...player } : item)),
-        }));
+        setData((current) => ({ ...current, players: current.players.map((item) => (item.id === player.id ? { ...item, ...player } : item)) }));
+        void runWrite("Unable to update player.", async () => {
+          const existing = data.players.find((item) => item.id === player.id);
+          await supabase
+            .from("players")
+            .update({
+              jersey_no: player.jersey,
+              date_of_birth: player.dateOfBirth,
+              gender: player.gender,
+              height_cm: player.height ? Number(player.height) : null,
+              weight_kg: player.weight ? Number(player.weight) : null,
+              position: player.position,
+              dominant_hand: player.hand,
+              experience_level: player.experience,
+              profile_photo: player.profileImage,
+              bio: player.bio,
+              is_public_profile: player.isPublic,
+            })
+            .eq("id", player.id)
+            .throwOnError();
+          if ((player.name && player.name !== existing?.name) || (player.email && player.email !== existing?.email)) {
+            const { data: row } = await supabase.from("players").select("user_id").eq("id", player.id).maybeSingle<{ user_id: string }>();
+            if (row?.user_id) await supabase.from("profiles").update({ full_name: player.name, email: player.email }).eq("id", row.user_id).throwOnError();
+          }
+        });
       },
       deletePlayer: (playerId) => {
-        mutate((current) => ({
-          ...current,
-          players: current.players.filter((player) => player.id !== playerId),
-          attendanceRecords: current.attendanceRecords.filter((record) => record.playerId !== playerId),
-          workoutAssignments: current.workoutAssignments.filter((assignment) => assignment.playerId !== playerId),
-          tournamentPlayers: current.tournamentPlayers.filter((item) => item.playerId !== playerId),
-        }));
+        setData((current) => ({ ...current, players: current.players.filter((player) => player.id !== playerId) }));
+        void runWrite("Unable to delete player.", async () => {
+          await supabase.from("players").delete().eq("id", playerId).throwOnError();
+        });
       },
       togglePlayerPublicProfile: (playerId) => {
-        mutate((current) => ({
-          ...current,
-          players: current.players.map((player) => (player.id === playerId ? { ...player, isPublic: !player.isPublic } : player)),
-        }));
+        const player = data.players.find((item) => item.id === playerId);
+        setData((current) => ({ ...current, players: current.players.map((item) => (item.id === playerId ? { ...item, isPublic: !item.isPublic } : item)) }));
+        void runWrite("Unable to update public profile.", async () => {
+          await supabase.from("players").update({ is_public_profile: !player?.isPublic }).eq("id", playerId).throwOnError();
+        });
       },
       addTraining: (training) => {
-        const created: TrainingSession = { ...training, id: createId("t") };
-        mutate((current) => ({
-          ...current,
-          trainingSessions: [created, ...current.trainingSessions],
-          attendanceRecords: [
-            ...current.players.map((player) => ({
-              id: createId("att"),
-              trainingId: created.id,
-              playerId: player.id,
-              response: "No response" as AttendanceStatus,
-              updatedAt: new Date().toISOString(),
-            })),
-            ...current.attendanceRecords,
-          ],
-          notifications: [
-            {
-              id: createId("note"),
-              title: "New training scheduled",
-              body: `${created.title} | ${created.location}`,
-              time: "Just now",
-              type: "training",
-              read: false,
-              targetRole: "player",
-              relatedPath: "/player/training",
-            },
-            ...current.notifications,
-          ],
-        }));
+        const created: TrainingSession = { ...training, id: makeId("training") };
+        const attendance = data.players.map((player) => ({ id: makeId("att"), trainingId: created.id, playerId: player.id, response: "No response" as AttendanceStatus, updatedAt: new Date().toISOString() }));
+        setData((current) => ({ ...current, trainingSessions: [created, ...current.trainingSessions], attendanceRecords: [...attendance, ...current.attendanceRecords] }));
+        void runWrite("Unable to add training.", async () => {
+          await supabase.from("training_sessions").insert({ id: created.id, ...trainingPayload(created), created_by: currentUser?.id ?? null }).throwOnError();
+          if (data.players.length) {
+            await supabase
+              .from("training_attendance")
+              .insert(data.players.map((player) => ({ id: makeId("att"), training_session_id: created.id, player_id: player.id, attendance_status: "maybe" })))
+              .throwOnError();
+          }
+        });
         return created;
       },
       updateTraining: (training) => {
-        mutate((current) => ({
-          ...current,
-          trainingSessions: current.trainingSessions.map((item) => (item.id === training.id ? { ...item, ...training } : item)),
-        }));
+        setData((current) => ({ ...current, trainingSessions: current.trainingSessions.map((item) => (item.id === training.id ? { ...item, ...training } : item)) }));
+        void runWrite("Unable to update training.", async () => {
+          await supabase.from("training_sessions").update(trainingPayload(training)).eq("id", training.id).throwOnError();
+        });
       },
       deleteTraining: (trainingId) => {
-        mutate((current) => ({
-          ...current,
-          trainingSessions: current.trainingSessions.filter((training) => training.id !== trainingId),
-          attendanceRecords: current.attendanceRecords.filter((record) => record.trainingId !== trainingId),
-        }));
+        setData((current) => ({ ...current, trainingSessions: current.trainingSessions.filter((training) => training.id !== trainingId), attendanceRecords: current.attendanceRecords.filter((record) => record.trainingId !== trainingId) }));
+        void runWrite("Unable to delete training.", async () => {
+          await supabase.from("training_sessions").delete().eq("id", trainingId).throwOnError();
+        });
       },
       cancelTraining: (trainingId) => {
-        mutate((current) => ({
-          ...current,
-          trainingSessions: current.trainingSessions.map((training) =>
-            training.id === trainingId ? { ...training, status: "Cancelled" } : training,
-          ),
-        }));
+        setData((current) => ({ ...current, trainingSessions: current.trainingSessions.map((training) => (training.id === trainingId ? { ...training, status: "Cancelled" } : training)) }));
+        void runWrite("Unable to cancel training.", async () => {
+          await supabase.from("training_sessions").update({ status: "cancelled" }).eq("id", trainingId).throwOnError();
+        });
       },
       submitAttendance: (trainingId, playerId, response) => {
-        mutate((current) => ({
-          ...current,
-          attendanceRecords: upsertAttendance(current.attendanceRecords, trainingId, playerId, { response }),
-        }));
+        const updatedAt = new Date().toISOString();
+        setData((current) => ({ ...current, attendanceRecords: upsertAttendance(current.attendanceRecords, trainingId, playerId, { response, updatedAt }) }));
+        void runWrite("Unable to submit attendance.", async () => {
+          await supabase
+            .from("training_attendance")
+            .upsert({ training_session_id: trainingId, player_id: playerId, attendance_status: fromAttendanceStatus(response), updated_at: updatedAt }, { onConflict: "training_session_id,player_id" })
+            .throwOnError();
+        });
       },
       updateAttendanceByCoach: (trainingId, playerId, coachStatus) => {
-        mutate((current) => ({
-          ...current,
-          attendanceRecords: upsertAttendance(current.attendanceRecords, trainingId, playerId, { coachStatus }),
-        }));
+        const updatedAt = new Date().toISOString();
+        setData((current) => ({ ...current, attendanceRecords: upsertAttendance(current.attendanceRecords, trainingId, playerId, { coachStatus, response: coachStatus, updatedAt }) }));
+        void runWrite("Unable to update attendance.", async () => {
+          await supabase
+            .from("training_attendance")
+            .upsert({ training_session_id: trainingId, player_id: playerId, attendance_status: fromAttendanceStatus(coachStatus), updated_at: updatedAt }, { onConflict: "training_session_id,player_id" })
+            .throwOnError();
+        });
       },
       addWorkoutPlan: (plan, tasks = [], playerIds = []) => {
-        const created: WorkoutPlan = { ...plan, id: createId("wp") };
-        const createdTasks = tasks.map((task) => ({ ...task, id: createId("wt"), planId: created.id }));
-        mutate((current) => ({
-          ...current,
-          workoutPlans: [created, ...current.workoutPlans],
-          workoutTasks: [...createdTasks, ...current.workoutTasks],
-          workoutAssignments: [
-            ...playerIds.map((playerId) => ({ id: createId("wa"), planId: created.id, playerId })),
-            ...current.workoutAssignments,
-          ],
-          notifications: [
-            {
-              id: createId("note"),
-              title: "Workout assigned",
-              body: `${created.title} is live.`,
-              time: "Just now",
-              type: "workout",
-              read: false,
-              targetRole: "player",
-              relatedPath: "/player/workouts",
-            },
-            ...current.notifications,
-          ],
-        }));
+        const created: WorkoutPlan = { ...plan, id: makeId("wp") };
+        const createdTasks = tasks.map((task) => ({ ...task, id: makeId("wt"), planId: created.id }));
+        const assignments = playerIds.map((playerId) => ({ id: makeId("wa"), planId: created.id, playerId }));
+        setData((current) => ({ ...current, workoutPlans: [created, ...current.workoutPlans], workoutTasks: [...createdTasks, ...current.workoutTasks], workoutAssignments: [...assignments, ...current.workoutAssignments] }));
+        void runWrite("Unable to add workout.", async () => {
+          await supabase.from("workout_plans").insert({ id: created.id, ...workoutPlanPayload(created), assigned_by: currentUser?.id ?? null }).throwOnError();
+          if (createdTasks.length) await supabase.from("workout_tasks").insert(createdTasks.map((task) => ({ id: task.id, ...workoutTaskPayload(task) }))).throwOnError();
+          if (assignments.length) await supabase.from("workout_assignments").insert(assignments.map((assignment) => ({ id: assignment.id, workout_plan_id: assignment.planId, player_id: assignment.playerId }))).throwOnError();
+        });
         return created;
       },
       updateWorkoutPlan: (plan) => {
-        mutate((current) => ({
-          ...current,
-          workoutPlans: current.workoutPlans.map((item) => (item.id === plan.id ? { ...item, ...plan } : item)),
-        }));
+        setData((current) => ({ ...current, workoutPlans: current.workoutPlans.map((item) => (item.id === plan.id ? { ...item, ...plan } : item)) }));
+        void runWrite("Unable to update workout.", async () => {
+          await supabase.from("workout_plans").update(workoutPlanPayload(plan)).eq("id", plan.id).throwOnError();
+        });
       },
       deleteWorkoutPlan: (planId) => {
-        mutate((current) => ({
-          ...current,
-          workoutPlans: current.workoutPlans.filter((plan) => plan.id !== planId),
-          workoutTasks: current.workoutTasks.filter((task) => task.planId !== planId),
-          workoutAssignments: current.workoutAssignments.filter((assignment) => assignment.planId !== planId),
-          workoutSubmissions: current.workoutSubmissions.filter((submission) => submission.planId !== planId),
-        }));
+        setData((current) => ({ ...current, workoutPlans: current.workoutPlans.filter((plan) => plan.id !== planId) }));
+        void runWrite("Unable to delete workout.", async () => {
+          await supabase.from("workout_plans").delete().eq("id", planId).throwOnError();
+        });
       },
       addWorkoutTask: (planId, task) => {
-        const created: WorkoutTask = { ...task, id: createId("wt"), planId };
-        mutate((current) => ({ ...current, workoutTasks: [created, ...current.workoutTasks] }));
+        const created: WorkoutTask = { ...task, id: makeId("wt"), planId };
+        setData((current) => ({ ...current, workoutTasks: [created, ...current.workoutTasks] }));
+        void runWrite("Unable to add workout task.", async () => {
+          await supabase.from("workout_tasks").insert({ id: created.id, ...workoutTaskPayload(created, planId) }).throwOnError();
+        });
         return created;
       },
       updateWorkoutTask: (task) => {
-        mutate((current) => ({
-          ...current,
-          workoutTasks: current.workoutTasks.map((item) => (item.id === task.id ? { ...item, ...task } : item)),
-        }));
+        setData((current) => ({ ...current, workoutTasks: current.workoutTasks.map((item) => (item.id === task.id ? { ...item, ...task } : item)) }));
+        void runWrite("Unable to update workout task.", async () => {
+          await supabase.from("workout_tasks").update(workoutTaskPayload(task)).eq("id", task.id).throwOnError();
+        });
       },
       deleteWorkoutTask: (taskId) => {
-        mutate((current) => ({
-          ...current,
-          workoutTasks: current.workoutTasks.filter((task) => task.id !== taskId),
-          workoutSubmissions: current.workoutSubmissions.filter((submission) => submission.taskId !== taskId),
-        }));
+        setData((current) => ({ ...current, workoutTasks: current.workoutTasks.filter((task) => task.id !== taskId) }));
+        void runWrite("Unable to delete workout task.", async () => {
+          await supabase.from("workout_tasks").delete().eq("id", taskId).throwOnError();
+        });
       },
-      assignWorkoutPlayers: (planId, playerIds) => {
-        mutate((current) => ({
-          ...current,
-          workoutAssignments: [
-            ...current.workoutAssignments.filter((assignment) => assignment.planId !== planId),
-            ...playerIds.map((playerId) => ({ id: createId("wa"), planId, playerId })),
-          ],
-        }));
-      },
-      updateWorkoutAssignments: (planId, playerIds) => {
-        mutate((current) => ({
-          ...current,
-          workoutAssignments: [
-            ...current.workoutAssignments.filter((assignment) => assignment.planId !== planId),
-            ...playerIds.map((playerId) => ({ id: createId("wa"), planId, playerId })),
-          ],
-        }));
-      },
+      assignWorkoutPlayers: (planId, playerIds) => replaceWorkoutAssignments(planId, playerIds),
+      updateWorkoutAssignments: (planId, playerIds) => replaceWorkoutAssignments(planId, playerIds),
       submitWorkoutTask: (submission) => {
-        const created: WorkoutSubmission = {
-          ...submission,
-          id: createId("sub"),
-          reviewed: false,
-          submittedAt: new Date().toISOString(),
-        };
-        mutate((current) => ({
-          ...current,
-          workoutSubmissions: [
-            created,
-            ...current.workoutSubmissions.filter((item) => !(item.taskId === submission.taskId && item.playerId === submission.playerId)),
-          ],
-        }));
+        const created: WorkoutSubmission = { ...submission, id: makeId("sub"), reviewed: false, submittedAt: new Date().toISOString() };
+        setData((current) => ({ ...current, workoutSubmissions: [created, ...current.workoutSubmissions.filter((item) => !(item.taskId === submission.taskId && item.playerId === submission.playerId))] }));
+        void runWrite("Unable to submit workout task.", async () => {
+          await supabase
+            .from("workout_task_submissions")
+            .upsert({ id: created.id, workout_task_id: submission.taskId, player_id: submission.playerId, status: submission.status === "not done" ? "not_done" : "done", proof_image: submission.proofName ?? null, note: submission.note ?? null, submitted_at: created.submittedAt }, { onConflict: "workout_task_id,player_id" })
+            .throwOnError();
+        });
         return created;
       },
       reviewWorkoutSubmission: (submissionId) => {
-        mutate((current) => ({
-          ...current,
-          workoutSubmissions: current.workoutSubmissions.map((item) => (item.id === submissionId ? { ...item, reviewed: true } : item)),
-        }));
+        setData((current) => ({ ...current, workoutSubmissions: current.workoutSubmissions.map((item) => (item.id === submissionId ? { ...item, reviewed: true } : item)) }));
       },
       deleteWorkoutSubmission: (submissionId) => {
-        mutate((current) => ({
-          ...current,
-          workoutSubmissions: current.workoutSubmissions.filter((submission) => submission.id !== submissionId),
-        }));
+        setData((current) => ({ ...current, workoutSubmissions: current.workoutSubmissions.filter((submission) => submission.id !== submissionId) }));
+        void runWrite("Unable to delete submission.", async () => {
+          await supabase.from("workout_task_submissions").delete().eq("id", submissionId).throwOnError();
+        });
       },
       addTournament: (tournament, playerIds = []) => {
-        const created: Tournament = { ...tournament, id: createId("tr") };
-        mutate((current) => ({
-          ...current,
-          tournaments: [created, ...current.tournaments],
-          tournamentPlayers: [
-            ...playerIds.map((playerId) => ({ id: createId("tp"), tournamentId: created.id, playerId, role: "main player" as const })),
-            ...current.tournamentPlayers,
-          ],
-          notifications: [
-            {
-              id: createId("note"),
-              title: "Tournament roster posted",
-              body: `${created.name} roster is ready.`,
-              time: "Just now",
-              type: "tournament",
-              read: false,
-              targetRole: "player",
-              relatedPath: "/player/tournaments",
-            },
-            ...current.notifications,
-          ],
-        }));
+        const created: Tournament = { ...tournament, id: makeId("tr") };
+        const selected = playerIds.map((playerId) => ({ id: makeId("tp"), tournamentId: created.id, playerId, role: "main player" as const }));
+        setData((current) => ({ ...current, tournaments: [created, ...current.tournaments], tournamentPlayers: [...selected, ...current.tournamentPlayers] }));
+        void runWrite("Unable to add tournament.", async () => {
+          await supabase.from("tournaments").insert({ id: created.id, ...tournamentPayload(created) }).throwOnError();
+          if (selected.length) await supabase.from("tournament_players").insert(selected.map((row) => ({ id: row.id, tournament_id: row.tournamentId, player_id: row.playerId, role: fromTournamentRole(row.role) }))).throwOnError();
+        });
         return created;
       },
       updateTournament: (tournament) => {
-        mutate((current) => ({
-          ...current,
-          tournaments: current.tournaments.map((item) => (item.id === tournament.id ? { ...item, ...tournament } : item)),
-        }));
+        setData((current) => ({ ...current, tournaments: current.tournaments.map((item) => (item.id === tournament.id ? { ...item, ...tournament } : item)) }));
+        void runWrite("Unable to update tournament.", async () => {
+          await supabase.from("tournaments").update(tournamentPayload(tournament)).eq("id", tournament.id).throwOnError();
+        });
       },
       deleteTournament: (tournamentId) => {
-        mutate((current) => ({
-          ...current,
-          tournaments: current.tournaments.filter((tournament) => tournament.id !== tournamentId),
-          tournamentPlayers: current.tournamentPlayers.filter((item) => item.tournamentId !== tournamentId),
-          tournamentStats: current.tournamentStats.filter((item) => item.tournamentId !== tournamentId),
-          teamLineups: current.teamLineups.filter((item) => item.tournamentId !== tournamentId),
-        }));
+        setData((current) => ({ ...current, tournaments: current.tournaments.filter((tournament) => tournament.id !== tournamentId) }));
+        void runWrite("Unable to delete tournament.", async () => {
+          await supabase.from("tournaments").delete().eq("id", tournamentId).throwOnError();
+        });
       },
       selectTournamentPlayer: (tournamentId, playerId, role) => {
-        mutate((current) => {
+        const id = makeId("tp");
+        setData((current) => {
           const exists = current.tournamentPlayers.some((item) => item.tournamentId === tournamentId && item.playerId === playerId);
-          return {
-            ...current,
-            tournamentPlayers: exists
-              ? current.tournamentPlayers.map((item) => (item.tournamentId === tournamentId && item.playerId === playerId ? { ...item, role } : item))
-              : [{ id: createId("tp"), tournamentId, playerId, role }, ...current.tournamentPlayers],
-          };
+          return { ...current, tournamentPlayers: exists ? current.tournamentPlayers.map((item) => (item.tournamentId === tournamentId && item.playerId === playerId ? { ...item, role } : item)) : [{ id, tournamentId, playerId, role }, ...current.tournamentPlayers] };
+        });
+        void runWrite("Unable to select tournament player.", async () => {
+          await supabase.from("tournament_players").upsert({ id, tournament_id: tournamentId, player_id: playerId, role: fromTournamentRole(role) }, { onConflict: "tournament_id,player_id" }).throwOnError();
         });
       },
       removeTournamentPlayer: (tournamentId, playerId) => {
-        mutate((current) => ({
-          ...current,
-          tournamentPlayers: current.tournamentPlayers.filter((item) => !(item.tournamentId === tournamentId && item.playerId === playerId)),
-          tournamentStats: current.tournamentStats.filter((item) => !(item.tournamentId === tournamentId && item.playerId === playerId)),
-        }));
+        setData((current) => ({ ...current, tournamentPlayers: current.tournamentPlayers.filter((item) => !(item.tournamentId === tournamentId && item.playerId === playerId)) }));
+        void runWrite("Unable to remove tournament player.", async () => {
+          await supabase.from("tournament_players").delete().eq("tournament_id", tournamentId).eq("player_id", playerId).throwOnError();
+        });
       },
       updateTournamentPlayerRole: (tournamentId, playerId, role) => {
-        mutate((current) => ({
-          ...current,
-          tournamentPlayers: current.tournamentPlayers.map((item) =>
-            item.tournamentId === tournamentId && item.playerId === playerId ? { ...item, role } : item,
-          ),
-        }));
+        setData((current) => ({ ...current, tournamentPlayers: current.tournamentPlayers.map((item) => (item.tournamentId === tournamentId && item.playerId === playerId ? { ...item, role } : item)) }));
+        void runWrite("Unable to update tournament role.", async () => {
+          await supabase.from("tournament_players").update({ role: fromTournamentRole(role) }).eq("tournament_id", tournamentId).eq("player_id", playerId).throwOnError();
+        });
       },
       updateTournamentStats: (stats) => {
-        mutate((current) => {
-          const id = stats.id ?? createId("ts");
-          const next = { ...stats, id };
-          const exists = current.tournamentStats.some((item) => item.id === id);
-          return {
-            ...current,
-            tournamentStats: exists ? current.tournamentStats.map((item) => (item.id === id ? next : item)) : [next, ...current.tournamentStats],
-          };
+        const id = stats.id ?? makeId("ts");
+        const next: TournamentStats = { id, tournamentId: stats.tournamentId, playerId: stats.playerId, score: stats.score, assist: stats.assist, blocks: stats.blocks, turnovers: stats.turnovers, gamesPlayed: stats.gamesPlayed, note: stats.note };
+        setData((current) => ({ ...current, tournamentStats: current.tournamentStats.some((item) => item.id === id) ? current.tournamentStats.map((item) => (item.id === id ? next : item)) : [next, ...current.tournamentStats] }));
+        void runWrite("Unable to update stats.", async () => {
+          await supabase.from("tournament_player_stats").upsert({ id, ...tournamentStatsPayload(next) }, { onConflict: "tournament_id,player_id" }).throwOnError();
         });
       },
       deleteTournamentStats: (statsId) => {
-        mutate((current) => ({
-          ...current,
-          tournamentStats: current.tournamentStats.filter((stats) => stats.id !== statsId),
-        }));
+        setData((current) => ({ ...current, tournamentStats: current.tournamentStats.filter((stats) => stats.id !== statsId) }));
+        void runWrite("Unable to delete stats.", async () => {
+          await supabase.from("tournament_player_stats").delete().eq("id", statsId).throwOnError();
+        });
       },
       createLineup: (lineup) => {
-        const created: TeamLineup = { ...lineup, id: createId("lineup"), createdAt: new Date().toISOString() };
-        mutate((current) => ({ ...current, teamLineups: [created, ...current.teamLineups] }));
+        const created: TeamLineup = { ...lineup, id: makeId("lineup"), createdAt: new Date().toISOString() };
+        setData((current) => ({ ...current, teamLineups: [created, ...current.teamLineups] }));
+        void runWrite("Unable to create lineup.", async () => {
+          await supabase.from("team_lineups").insert({ id: created.id, tournament_id: created.tournamentId, lineup_name: created.name, note: created.notes ?? "", created_by: currentUser?.id ?? null }).throwOnError();
+          if (created.players.length) await supabase.from("team_lineup_players").insert(created.players.map((row) => ({ id: row.id || makeId("lp"), team_lineup_id: created.id, player_id: row.playerId, position: row.position, line_order: row.lineOrder }))).throwOnError();
+        });
         return created;
       },
       updateLineup: (lineup) => {
-        mutate((current) => ({
-          ...current,
-          teamLineups: current.teamLineups.map((item) => (item.id === lineup.id ? { ...item, ...lineup } : item)),
-        }));
+        setData((current) => ({ ...current, teamLineups: current.teamLineups.map((item) => (item.id === lineup.id ? { ...item, ...lineup } : item)) }));
+        void runWrite("Unable to update lineup.", async () => {
+          await supabase.from("team_lineups").update({ lineup_name: lineup.name, note: lineup.notes ?? "" }).eq("id", lineup.id).throwOnError();
+          if (lineup.players) {
+            await supabase.from("team_lineup_players").delete().eq("team_lineup_id", lineup.id).throwOnError();
+            await supabase.from("team_lineup_players").insert(lineup.players.map((row) => ({ id: row.id || makeId("lp"), team_lineup_id: lineup.id, player_id: row.playerId, position: row.position, line_order: row.lineOrder }))).throwOnError();
+          }
+        });
       },
       deleteLineup: (lineupId) => {
-        mutate((current) => ({
-          ...current,
-          teamLineups: current.teamLineups.filter((lineup) => lineup.id !== lineupId),
-        }));
+        setData((current) => ({ ...current, teamLineups: current.teamLineups.filter((lineup) => lineup.id !== lineupId) }));
+        void runWrite("Unable to delete lineup.", async () => {
+          await supabase.from("team_lineups").delete().eq("id", lineupId).throwOnError();
+        });
       },
       addFitnessRecord: (record) => {
-        const created: FitnessRecord = { ...record, id: createId("fit") };
-        mutate((current) => ({ ...current, fitnessRecords: [created, ...current.fitnessRecords] }));
+        const created: FitnessRecord = { ...record, id: makeId("fit") };
+        setData((current) => ({ ...current, fitnessRecords: [created, ...current.fitnessRecords] }));
+        void runWrite("Unable to add fitness record.", async () => {
+          await supabase.from("fitness_records").insert({ id: created.id, ...fitnessPayload(created), recorded_by: currentUser?.id ?? null }).throwOnError();
+        });
         return created;
       },
       updateFitnessRecord: (record) => {
-        mutate((current) => ({
-          ...current,
-          fitnessRecords: current.fitnessRecords.map((item) => (item.id === record.id ? { ...item, ...record } : item)),
-        }));
+        setData((current) => ({ ...current, fitnessRecords: current.fitnessRecords.map((item) => (item.id === record.id ? { ...item, ...record } : item)) }));
+        void runWrite("Unable to update fitness record.", async () => {
+          await supabase.from("fitness_records").update(fitnessPayload(record)).eq("id", record.id).throwOnError();
+        });
       },
       deleteFitnessRecord: (recordId) => {
-        mutate((current) => ({
-          ...current,
-          fitnessRecords: current.fitnessRecords.filter((record) => record.id !== recordId),
-        }));
+        setData((current) => ({ ...current, fitnessRecords: current.fitnessRecords.filter((record) => record.id !== recordId) }));
+        void runWrite("Unable to delete fitness record.", async () => {
+          await supabase.from("fitness_records").delete().eq("id", recordId).throwOnError();
+        });
       },
       addInjuryRecord: (record) => {
-        const created: InjuryRecord = { ...record, id: createId("inj") };
-        mutate((current) => ({ ...current, injuryRecords: [created, ...current.injuryRecords] }));
+        const created: InjuryRecord = { ...record, id: makeId("inj") };
+        setData((current) => ({ ...current, injuryRecords: [created, ...current.injuryRecords] }));
+        void runWrite("Unable to add injury record.", async () => {
+          await supabase.from("injury_records").insert({ id: created.id, ...injuryPayload(created), recorded_by: currentUser?.id ?? null }).throwOnError();
+        });
         return created;
       },
       updateInjuryRecord: (record) => {
-        mutate((current) => ({
-          ...current,
-          injuryRecords: current.injuryRecords.map((item) => (item.id === record.id ? { ...item, ...record } : item)),
-        }));
+        setData((current) => ({ ...current, injuryRecords: current.injuryRecords.map((item) => (item.id === record.id ? { ...item, ...record } : item)) }));
+        void runWrite("Unable to update injury record.", async () => {
+          await supabase.from("injury_records").update(injuryPayload(record)).eq("id", record.id).throwOnError();
+        });
       },
       deleteInjuryRecord: (recordId) => {
-        mutate((current) => ({
-          ...current,
-          injuryRecords: current.injuryRecords.filter((record) => record.id !== recordId),
-        }));
+        setData((current) => ({ ...current, injuryRecords: current.injuryRecords.filter((record) => record.id !== recordId) }));
+        void runWrite("Unable to delete injury record.", async () => {
+          await supabase.from("injury_records").delete().eq("id", recordId).throwOnError();
+        });
       },
       markNotificationRead: (notificationId, read = true) => {
-        mutate((current) => ({
-          ...current,
-          notifications: current.notifications.map((item) => (item.id === notificationId ? { ...item, read } : item)),
-        }));
+        setData((current) => ({ ...current, notifications: current.notifications.map((item) => (item.id === notificationId ? { ...item, read } : item)) }));
+        void runWrite("Unable to update notification.", async () => {
+          await supabase.from("notifications").update({ is_read: read }).eq("id", notificationId).throwOnError();
+        });
       },
-      addNotification,
+      addNotification: (notification) => {
+        const created: Notification = { ...notification, id: makeId("note"), time: "Just now", read: false };
+        setData((current) => ({ ...current, notifications: [created, ...current.notifications] }));
+        void runWrite("Unable to add notification.", async () => {
+          await supabase.from("notifications").insert({ id: created.id, user_id: null, title: created.title, message: created.body, type: created.type, related_id: null, is_read: false }).throwOnError();
+        });
+        return created;
+      },
       deleteNotification: (notificationId) => {
-        mutate((current) => ({
-          ...current,
-          notifications: current.notifications.filter((notification) => notification.id !== notificationId),
-        }));
+        setData((current) => ({ ...current, notifications: current.notifications.filter((notification) => notification.id !== notificationId) }));
+        void runWrite("Unable to delete notification.", async () => {
+          await supabase.from("notifications").delete().eq("id", notificationId).throwOnError();
+        });
       },
       addAchievement: (achievement) => {
-        const created: Achievement = { ...achievement, id: createId("ach") };
-        mutate((current) => ({ ...current, achievements: [created, ...current.achievements] }));
+        const created: Achievement = { ...achievement, id: makeId("ach") };
+        setData((current) => ({ ...current, achievements: [created, ...current.achievements] }));
+        void runWrite("Unable to add achievement.", async () => {
+          await supabase.from("achievements").insert({ id: created.id, ...achievementPayload(created) }).throwOnError();
+        });
         return created;
       },
       updateAchievement: (achievement) => {
-        mutate((current) => ({
-          ...current,
-          achievements: current.achievements.map((item) => (item.id === achievement.id ? { ...item, ...achievement } : item)),
-        }));
+        setData((current) => ({ ...current, achievements: current.achievements.map((item) => (item.id === achievement.id ? { ...item, ...achievement } : item)) }));
+        void runWrite("Unable to update achievement.", async () => {
+          await supabase.from("achievements").update(achievementPayload(achievement)).eq("id", achievement.id).throwOnError();
+        });
       },
       deleteAchievement: (achievementId) => {
-        mutate((current) => ({ ...current, achievements: current.achievements.filter((item) => item.id !== achievementId) }));
+        setData((current) => ({ ...current, achievements: current.achievements.filter((item) => item.id !== achievementId) }));
+        void runWrite("Unable to delete achievement.", async () => {
+          await supabase.from("achievements").delete().eq("id", achievementId).throwOnError();
+        });
       },
       addGallery: (gallery) => {
-        const created: Gallery = { ...gallery, id: createId("gal"), createdAt: new Date().toISOString() };
-        mutate((current) => ({ ...current, galleries: [created, ...current.galleries] }));
+        const created: Gallery = { ...gallery, id: makeId("gal"), createdAt: new Date().toISOString() };
+        setData((current) => ({ ...current, galleries: [created, ...current.galleries] }));
+        void runWrite("Unable to add gallery.", async () => {
+          await supabase.from("galleries").insert({ id: created.id, ...galleryPayload(created) }).throwOnError();
+        });
         return created;
       },
       updateGallery: (gallery) => {
-        mutate((current) => ({
-          ...current,
-          galleries: current.galleries.map((item) => (item.id === gallery.id ? { ...item, ...gallery } : item)),
-        }));
+        setData((current) => ({ ...current, galleries: current.galleries.map((item) => (item.id === gallery.id ? { ...item, ...gallery } : item)) }));
+        void runWrite("Unable to update gallery.", async () => {
+          await supabase.from("galleries").update(galleryPayload(gallery)).eq("id", gallery.id).throwOnError();
+        });
       },
       deleteGallery: (galleryId) => {
-        mutate((current) => ({
-          ...current,
-          galleries: current.galleries.filter((gallery) => gallery.id !== galleryId),
-          galleryImages: current.galleryImages.filter((image) => image.galleryId !== galleryId),
-        }));
+        setData((current) => ({ ...current, galleries: current.galleries.filter((gallery) => gallery.id !== galleryId) }));
+        void runWrite("Unable to delete gallery.", async () => {
+          await supabase.from("galleries").delete().eq("id", galleryId).throwOnError();
+        });
       },
       addGalleryImage: (image) => {
-        const created: GalleryImage = { ...image, id: createId("img") };
-        mutate((current) => ({ ...current, galleryImages: [created, ...current.galleryImages] }));
+        const created: GalleryImage = { ...image, id: makeId("img") };
+        setData((current) => ({ ...current, galleryImages: [created, ...current.galleryImages] }));
+        void runWrite("Unable to add gallery image.", async () => {
+          await supabase.from("gallery_images").insert({ id: created.id, gallery_id: created.galleryId, image_path: created.fileName, caption: created.caption }).throwOnError();
+        });
         return created;
       },
       deleteGalleryImage: (imageId) => {
-        mutate((current) => ({
-          ...current,
-          galleryImages: current.galleryImages.filter((image) => image.id !== imageId),
-        }));
+        setData((current) => ({ ...current, galleryImages: current.galleryImages.filter((image) => image.id !== imageId) }));
+        void runWrite("Unable to delete gallery image.", async () => {
+          await supabase.from("gallery_images").delete().eq("id", imageId).throwOnError();
+        });
       },
       updateClubPage: (page) => {
-        mutate((current) => ({
-          ...current,
-          clubPages: current.clubPages.map((item) => (item.id === page.id ? { ...item, ...page } : item)),
-        }));
+        setData((current) => ({ ...current, clubPages: current.clubPages.map((item) => (item.id === page.id ? { ...item, ...page } : item)) }));
+        void runWrite("Unable to update page.", async () => {
+          await supabase.from("club_pages").update({ title: page.title, content: page.body, status: page.status ? page.status.toLowerCase() : undefined }).eq("id", page.id).throwOnError();
+        });
       },
     }),
-    [addNotification, data, mutate, resetData],
+    [currentUser?.id, data, isLoadingData, refreshData, runWrite],
   );
+
+  function replaceWorkoutAssignments(planId: string, playerIds: string[]) {
+    const assignments = playerIds.map((playerId) => ({ id: makeId("wa"), planId, playerId }));
+    setData((current) => ({ ...current, workoutAssignments: [...current.workoutAssignments.filter((assignment) => assignment.planId !== planId), ...assignments] }));
+    void runWrite("Unable to assign workout players.", async () => {
+      await supabase.from("workout_assignments").delete().eq("workout_plan_id", planId).throwOnError();
+      if (assignments.length) await supabase.from("workout_assignments").insert(assignments.map((assignment) => ({ id: assignment.id, workout_plan_id: planId, player_id: assignment.playerId }))).throwOnError();
+    });
+  }
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }
@@ -544,10 +703,10 @@ function upsertAttendance(
   if (!exists) {
     return [
       {
-        id: createId("att"),
+        id: makeId("att"),
         trainingId,
         playerId,
-        response: "No response" as AttendanceStatus,
+        response: "No response",
         updatedAt: new Date().toISOString(),
         ...patch,
       },
@@ -555,9 +714,5 @@ function upsertAttendance(
     ];
   }
 
-  return records.map((record) =>
-    record.trainingId === trainingId && record.playerId === playerId
-      ? { ...record, ...patch, updatedAt: new Date().toISOString() }
-      : record,
-  );
+  return records.map((record) => (record.trainingId === trainingId && record.playerId === playerId ? { ...record, ...patch } : record));
 }

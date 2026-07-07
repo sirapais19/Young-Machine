@@ -1,27 +1,31 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 import type { AuthUser, Role } from "@/types/app";
+import type { ProfileRow } from "@/types/supabase";
 
 const STORAGE_KEY = "ym-auth-user-v1";
-
-const users: Record<string, AuthUser & { password: string }> = {
-  "capang@gmail.com": { id: "coach-capang", name: "Capang", email: "capang@gmail.com", role: "coach", password: "capang1234" },
-  "aina@gmail.com": { id: "manager-aina", name: "Aina", email: "aina@gmail.com", role: "manager", password: "aina1234" },
-  "aidit@gmail.com": { id: "player-aidit", name: "Aidit", email: "aidit@gmail.com", role: "player", playerId: "p1", password: "Player1234" },
-  "abu@gmail.com": { id: "player-abu", name: "Abu", email: "abu@gmail.com", role: "player", playerId: "p2", password: "Player1234" },
-  "ali@gmail.com": { id: "player-ali", name: "Ali", email: "ali@gmail.com", role: "player", playerId: "p3", password: "Player1234" },
-};
 
 export interface AuthContextValue {
   currentUser: AuthUser | null;
   role: Role | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => { ok: true; user: AuthUser } | { ok: false; error: string };
-  logout: () => void;
+  isLoadingAuth: boolean;
+  login: (email: string, password: string) => Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }>;
+  logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-function loadUser() {
+function cacheUser(user: AuthUser | null) {
+  if (typeof window === "undefined") return;
+  if (user) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  } else {
+    window.localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+export function readCachedAuthUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
@@ -32,29 +36,138 @@ function loadUser() {
   }
 }
 
+async function buildAuthUser(userId: string, fallbackEmail?: string): Promise<AuthUser> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, status, avatar_url, created_at, updated_at")
+    .eq("id", userId)
+    .maybeSingle<ProfileRow>();
+
+  if (profileError) throw profileError;
+  if (!profile) throw new Error("No profile exists for this Supabase user.");
+
+  let playerId: string | undefined;
+  if (profile.role === "player") {
+    const { data: player, error: playerError } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle<{ id: string }>();
+    if (playerError) throw playerError;
+    playerId = player?.id;
+  }
+
+  return {
+    id: profile.id,
+    name: profile.full_name ?? profile.email ?? "Young Machine user",
+    email: profile.email ?? fallbackEmail ?? "",
+    role: profile.role,
+    playerId,
+  };
+}
+
+export async function readAuthUserForGuard(): Promise<AuthUser | null> {
+  const cached = readCachedAuthUser();
+  if (cached) return cached;
+  if (!hasSupabaseEnv) return null;
+
+  const { data } = await supabase.auth.getSession();
+  const sessionUser = data.session?.user;
+  if (!sessionUser) return null;
+
+  try {
+    const authUser = await buildAuthUser(sessionUser.id, sessionUser.email);
+    cacheUser(authUser);
+    return authUser;
+  } catch (error) {
+    console.error("Unable to resolve route guard auth user", error);
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(loadUser);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(readCachedAuthUser);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    if (currentUser) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [currentUser]);
+    let mounted = true;
 
-  const login = useCallback((email: string, password: string) => {
-    const user = users[email.trim().toLowerCase()];
-    if (!user || user.password !== password) {
-      return { ok: false as const, error: "Email or password is incorrect." };
+    async function loadSession() {
+      if (!hasSupabaseEnv) {
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      const sessionUser = data.session?.user;
+      if (!sessionUser) {
+        if (mounted) {
+          setCurrentUser(null);
+          cacheUser(null);
+          setIsLoadingAuth(false);
+        }
+        return;
+      }
+
+      try {
+        const authUser = await buildAuthUser(sessionUser.id, sessionUser.email);
+        if (mounted) {
+          setCurrentUser(authUser);
+          cacheUser(authUser);
+        }
+      } catch (error) {
+        console.error("Unable to load Supabase profile", error);
+      } finally {
+        if (mounted) setIsLoadingAuth(false);
+      }
     }
-    const { password: _password, ...authUser } = user;
-    setCurrentUser(authUser);
-    return { ok: true as const, user: authUser };
+
+    loadSession();
+
+    if (!hasSupabaseEnv) return () => { mounted = false; };
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        setCurrentUser(null);
+        cacheUser(null);
+        return;
+      }
+
+      buildAuthUser(session.user.id, session.user.email)
+        .then((authUser) => {
+          setCurrentUser(authUser);
+          cacheUser(authUser);
+        })
+        .catch((error) => console.error("Unable to sync auth state", error));
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  const logout = useCallback(() => {
+  const login = useCallback(async (email: string, password: string) => {
+    if (!hasSupabaseEnv) {
+      return { ok: false as const, error: "Supabase env is missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY." };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error || !data.user) {
+      return { ok: false as const, error: error?.message ?? "Unable to sign in." };
+    }
+
+    try {
+      const authUser = await buildAuthUser(data.user.id, data.user.email);
+      setCurrentUser(authUser);
+      cacheUser(authUser);
+      return { ok: true as const, user: authUser };
+    } catch (profileError) {
+      await supabase.auth.signOut();
+      return { ok: false as const, error: profileError instanceof Error ? profileError.message : "Unable to load user profile." };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (hasSupabaseEnv) await supabase.auth.signOut();
     setCurrentUser(null);
+    cacheUser(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -62,10 +175,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentUser,
       role: currentUser?.role ?? null,
       isAuthenticated: Boolean(currentUser),
+      isLoadingAuth,
       login,
       logout,
     }),
-    [currentUser, login, logout],
+    [currentUser, isLoadingAuth, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
