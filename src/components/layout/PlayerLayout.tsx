@@ -18,50 +18,56 @@ export function PlayerLayout({ title, children }: { title?: string; children: Re
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto max-w-3xl px-4 h-16 flex items-center justify-between">
-          <Link to="/player/dashboard" className="flex items-center gap-2">
-            <YMLogo size={32} />
-            <div className="leading-none">
-              <div className="text-[10px] uppercase tracking-[0.25em] text-silver-muted">YM</div>
-              <div className="text-sm font-semibold">{title ?? "Player"}</div>
+    <div className="grid-bg min-h-[100dvh] text-foreground">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-18 max-w-4xl items-center justify-between px-4 py-3">
+          <Link to="/player/dashboard" className="flex min-w-0 items-center gap-3">
+            <YMLogo size={36} />
+            <div className="min-w-0 leading-tight">
+              <div className="text-[10px] font-semibold text-cyan">Young Machine</div>
+              <div className="truncate text-sm font-black">{title ?? "Player"}</div>
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <Link to="/player/notifications" className="grid h-10 w-10 place-items-center rounded-md border border-white/10 relative">
+            <Link
+              to="/player/notifications"
+              className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.045]"
+              aria-label="Notifications"
+            >
               <Bell className="h-4 w-4" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan" />
+              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan shadow-[0_0_14px_var(--cyan)]" />
             </Link>
             <Link to="/player/profile">
-              <PlayerAvatar name={currentUser.name} hue={205} size={36} />
+              <PlayerAvatar name={currentUser.name} hue={205} size={40} />
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-5 pb-28">{children}</main>
+      <main className="mx-auto max-w-4xl px-4 py-5 pb-28">{children}</main>
 
-      {/* Bottom nav — mobile & desktop (keeps sports app feel) */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-background/95 backdrop-blur-xl pb-safe">
-        <div className="mx-auto max-w-3xl grid grid-cols-5">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-background/92 pb-safe backdrop-blur-xl">
+        <div className="mx-auto grid max-w-4xl grid-cols-5 px-2">
           {tabs.map((t) => {
             const active = path === t.to || path.startsWith(t.to + "/");
             const Icon = t.icon;
+
             return (
               <Link
                 key={t.to}
                 to={t.to}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium",
-                  active ? "text-cyan" : "text-silver-muted"
+                  "flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-semibold",
+                  active ? "text-cyan" : "text-silver-muted",
                 )}
               >
-                <div className={cn("relative grid h-9 w-12 place-items-center rounded-full transition-colors",
-                  active && "bg-cyan/10")}>
+                <div
+                  className={cn(
+                    "relative grid h-10 w-12 place-items-center rounded-2xl border",
+                    active ? "border-cyan/25 bg-cyan/10 shadow-inner" : "border-transparent",
+                  )}
+                >
                   <Icon className="h-5 w-5" />
-                  {active && <span className="absolute -bottom-1 h-1 w-1 rounded-full bg-cyan" />}
                 </div>
                 <span>{t.label}</span>
               </Link>

@@ -7,6 +7,8 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 
+const isWindows = process.platform === "win32";
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -14,6 +16,8 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    plugins: [mcpPlugin()],
+    // The Lovable MCP plugin currently fails local Windows dev because it compares
+    // mixed slash styles in resolved paths. Keep it enabled for Lovable/Linux builds.
+    plugins: isWindows ? [] : [mcpPlugin()],
   },
 });

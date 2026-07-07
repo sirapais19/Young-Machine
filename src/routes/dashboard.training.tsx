@@ -1,48 +1,85 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatusBadge } from "@/components/ym/StatusBadge";
-import { CalendarDays, MapPin, Plus, Clock } from "lucide-react";
+import { CalendarDays, MapPin, Plus, Clock, Activity } from "lucide-react";
 import { trainings } from "@/data/mockData";
 
 export const Route = createFileRoute("/dashboard/training")({
-  head: () => ({ meta: [{ title: "Training · YM" }, { name: "robots", content: "noindex" }]}),
+  head: () => ({ meta: [{ title: "Training | YM" }, { name: "robots", content: "noindex" }] }),
   component: TrainingList,
 });
 
 function TrainingList() {
   return (
     <DashboardLayout title="Training">
-      <div className="flex justify-between items-center mb-5">
-        <p className="text-sm text-silver-muted">All scheduled sessions and history.</p>
-        <button className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-cyan">
-          <Plus className="h-4 w-4" /> Create
-        </button>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <section className="motion-rise mb-5 panel p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-lg border border-cyan/25 bg-cyan/10 px-3 py-1 text-[11px] font-semibold text-cyan">
+              <Activity className="h-3.5 w-3.5" />
+              Field schedule
+            </div>
+            <h2 className="text-3xl font-black sm:text-4xl">
+              Plan sessions around load, availability, and match prep.
+            </h2>
+            <p className="mt-3 max-w-[62ch] text-sm leading-6 text-silver-muted">
+              All scheduled sessions and training history for the Young Machine squad.
+            </p>
+          </div>
+          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-cyan">
+            <Plus className="h-4 w-4" />
+            Create
+          </button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
         {trainings.map((t) => (
-          <div key={t.id} className="panel panel-hover p-5">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="text-lg font-semibold">{t.title}</div>
-                <div className="mt-1 text-xs text-silver-muted flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{t.date}</span>
-                  <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{t.start}–{t.end}</span>
-                  <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{t.location}</span>
+          <article key={t.id} className="panel panel-hover p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xl font-black">{t.title}</div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-silver-muted">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5 text-cyan" />
+                    {t.date}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-cyan" />
+                    {t.start} to {t.end}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-cyan" />
+                    {t.location}
+                  </span>
                 </div>
               </div>
-              <StatusBadge tone={t.status === "Upcoming" ? "cyan" : t.status === "Completed" ? "green" : "red"}>{t.status}</StatusBadge>
+              <StatusBadge
+                tone={t.status === "Upcoming" ? "cyan" : t.status === "Completed" ? "green" : "red"}
+              >
+                {t.status}
+              </StatusBadge>
             </div>
-            {t.note && <p className="mt-3 text-sm text-silver">{t.note}</p>}
+            {t.note && <p className="mt-4 text-sm leading-6 text-silver">{t.note}</p>}
             {t.attendance && (
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-md bg-success/10 border border-success/25 py-2"><div className="text-lg font-bold text-success">{t.attendance.going}</div><div className="text-[10px] text-silver-muted">Going</div></div>
-                <div className="rounded-md bg-warning/10 border border-warning/25 py-2"><div className="text-lg font-bold text-warning">{t.attendance.maybe}</div><div className="text-[10px] text-silver-muted">Maybe</div></div>
-                <div className="rounded-md bg-destructive/10 border border-destructive/25 py-2"><div className="text-lg font-bold text-destructive">{t.attendance.out}</div><div className="text-[10px] text-silver-muted">Out</div></div>
+              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                <AttendanceBox label="Going" value={t.attendance.going} tone="text-success" />
+                <AttendanceBox label="Maybe" value={t.attendance.maybe} tone="text-warning" />
+                <AttendanceBox label="Out" value={t.attendance.out} tone="text-destructive" />
               </div>
             )}
-          </div>
+          </article>
         ))}
-      </div>
+      </section>
     </DashboardLayout>
+  );
+}
+
+function AttendanceBox({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] py-3">
+      <div className={`metric-nums text-2xl font-black ${tone}`}>{value}</div>
+      <div className="text-[10px] font-semibold text-silver-muted">{label}</div>
+    </div>
   );
 }

@@ -1,9 +1,26 @@
 import { useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Users, CalendarDays, ClipboardCheck, Dumbbell, ClipboardList,
-  Trophy, Users2, BarChart3, Activity, HeartPulse, Bell, Globe, Image as ImageIcon,
-  Award, Settings, Menu, X, Search, Plus,
+  Activity,
+  Award,
+  BarChart3,
+  Bell,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  Dumbbell,
+  Globe,
+  HeartPulse,
+  Image as ImageIcon,
+  LayoutDashboard,
+  Menu,
+  Plus,
+  Search,
+  Settings,
+  Trophy,
+  Users,
+  Users2,
+  X,
 } from "lucide-react";
 import { YMLogo } from "@/components/ym/Logo";
 import { PlayerAvatar } from "@/components/ym/Avatar";
@@ -11,13 +28,11 @@ import { cn } from "@/lib/utils";
 
 const groups = [
   {
-    label: "Overview",
-    items: [
-      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-    ],
+    label: "Command",
+    items: [{ to: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true }],
   },
   {
-    label: "Team",
+    label: "Roster",
     items: [
       { to: "/dashboard/players", label: "Players", icon: Users },
       { to: "/dashboard/training", label: "Training", icon: CalendarDays },
@@ -59,35 +74,68 @@ export function DashboardLayout({ title, children }: { title?: string; children:
 
   const SidebarBody = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center px-5 border-b border-white/5">
-        <Link to="/dashboard" onClick={() => setOpen(false)}>
+      <div className="border-b border-white/10 px-4 py-4">
+        <Link
+          to="/dashboard"
+          onClick={() => setOpen(false)}
+          className="flex items-center justify-between gap-3"
+        >
           <YMLogo showWordmark />
+          <span className="rounded-lg border border-cyan/25 bg-cyan/10 px-2 py-1 text-[10px] font-semibold text-cyan">
+            PRO
+          </span>
         </Link>
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="text-[10px] font-semibold text-silver-muted">MATCH WEEK READINESS</div>
+          <div className="mt-2 flex items-end justify-between">
+            <span className="metric-nums text-2xl font-bold text-cyan">87%</span>
+            <span className="text-[11px] text-silver-muted">KL Open block</span>
+          </div>
+          <div className="mt-3 h-1.5 rounded-full bg-white/10">
+            <div className="h-full w-[87%] rounded-full bg-cyan shadow-[0_0_18px_color-mix(in_oklab,var(--cyan)_70%,transparent)]" />
+          </div>
+        </div>
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {groups.map((g) => (
           <div key={g.label}>
-            <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-silver-muted/70">
+            <div className="px-3 pb-2 text-[10px] font-semibold text-silver-muted/80">
               {g.label}
             </div>
-            <ul className="space-y-0.5">
+            <ul className="space-y-1">
               {g.items.map((item) => {
                 const exact = "exact" in item && item.exact;
-                const active = exact ? path === item.to : path === item.to || path.startsWith(item.to + "/");
+                const active = exact
+                  ? path === item.to
+                  : path === item.to || path.startsWith(item.to + "/");
                 const Icon = item.icon;
+
                 return (
                   <li key={item.to}>
                     <Link
                       to={item.to}
                       onClick={() => setOpen(false)}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                        "group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium",
                         active
-                          ? "bg-cyan/10 text-cyan border border-cyan/25"
-                          : "text-silver hover:bg-white/5 hover:text-foreground border border-transparent"
+                          ? "border-cyan/35 bg-cyan/10 text-cyan shadow-inner"
+                          : "border-transparent text-silver hover:border-white/10 hover:bg-white/[0.045] hover:text-foreground",
                       )}
                     >
-                      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-cyan" : "text-silver-muted group-hover:text-foreground")} />
+                      <span
+                        className={cn(
+                          "grid h-8 w-8 shrink-0 place-items-center rounded-lg border",
+                          active ? "border-cyan/30 bg-cyan/10" : "border-white/10 bg-white/[0.03]",
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "h-4 w-4",
+                            active ? "text-cyan" : "text-silver-muted group-hover:text-foreground",
+                          )}
+                        />
+                      </span>
                       <span className="truncate">{item.label}</span>
                     </Link>
                   </li>
@@ -97,12 +145,15 @@ export function DashboardLayout({ title, children }: { title?: string; children:
           </div>
         ))}
       </nav>
-      <div className="border-t border-white/5 p-4">
-        <div className="flex items-center gap-3">
-          <PlayerAvatar name="Capang" hue={200} size={36} />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">Capang</div>
-            <div className="text-[11px] text-silver-muted">Head Coach</div>
+
+      <div className="border-t border-white/10 p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="flex items-center gap-3">
+            <PlayerAvatar name="Capang" hue={200} size={38} />
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">Capang</div>
+              <div className="text-[11px] text-silver-muted">Head Coach</div>
+            </div>
           </div>
         </div>
       </div>
@@ -110,59 +161,80 @@ export function DashboardLayout({ title, children }: { title?: string; children:
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 border-r border-white/5 bg-sidebar z-30">
+    <div className="grid-bg min-h-[100dvh] text-foreground">
+      <aside className="fixed inset-y-4 left-4 z-30 hidden w-[17.5rem] overflow-hidden rounded-[1.75rem] border border-white/10 bg-sidebar/92 shadow-[0_24px_90px_-58px_color-mix(in_oklab,var(--cyan)_55%,black)] lg:flex">
         {SidebarBody}
       </aside>
 
-      {/* Mobile drawer */}
       {open && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-72 bg-sidebar border-r border-white/10">
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            className="absolute inset-0 bg-black/72 backdrop-blur-md"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+          />
+          <aside className="absolute inset-y-3 left-3 w-[min(21rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.5rem] border border-white/10 bg-sidebar shadow-2xl">
+            <button
+              className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/5 text-silver"
+              onClick={() => setOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="h-4 w-4" />
+            </button>
             {SidebarBody}
           </aside>
         </div>
       )}
 
-      <div className="lg:pl-64">
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 h-16 border-b border-white/5 bg-background/80 backdrop-blur-xl">
-          <div className="flex h-full items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-3 min-w-0">
+      <div className="lg:pl-[19.5rem]">
+        <header className="sticky top-0 z-20 border-b border-white/10 bg-background/80 backdrop-blur-xl">
+          <div className="ym-container flex min-h-20 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
               <button
-                className="lg:hidden grid h-10 w-10 place-items-center rounded-md border border-white/10"
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.045] lg:hidden"
                 onClick={() => setOpen(true)}
                 aria-label="Open menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-silver-muted">Young Machine</div>
-                <h1 className="truncate text-lg font-bold sm:text-xl">{title ?? "Dashboard"}</h1>
+                <div className="text-[11px] font-semibold text-cyan">Young Machine HQ</div>
+                <h1 className="truncate text-xl font-black sm:text-2xl">{title ?? "Dashboard"}</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 w-64">
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              <label className="hidden w-72 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2.5 md:flex">
                 <Search className="h-4 w-4 text-silver-muted" />
-                <input className="bg-transparent text-sm outline-none placeholder:text-silver-muted flex-1" placeholder="Search…" />
-              </div>
-              <button className="grid h-10 w-10 place-items-center rounded-md border border-white/10 relative">
+                <input
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-silver-muted"
+                  placeholder="Search roster, drills, matches"
+                />
+              </label>
+              <button className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground glow-cyan sm:inline-flex">
+                <Plus className="h-4 w-4" />
+                <span>New session</span>
+              </button>
+              <button
+                className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.045]"
+                aria-label="Notifications"
+              >
                 <Bell className="h-4 w-4" />
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan" />
+                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan shadow-[0_0_14px_var(--cyan)]" />
               </button>
               <div className="hidden sm:block">
-                <PlayerAvatar name="Capang" hue={200} size={36} />
+                <PlayerAvatar name="Capang" hue={200} size={40} />
               </div>
             </div>
           </div>
         </header>
 
-        <main className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">{children}</main>
+        <main className="ym-container px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-8">{children}</main>
 
-        {/* Mobile floating quick action */}
-        <button className="lg:hidden fixed bottom-5 right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground glow-cyan">
+        <button
+          className="fixed bottom-5 right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground glow-cyan lg:hidden"
+          aria-label="Create new item"
+        >
           <Plus className="h-6 w-6" />
         </button>
       </div>
