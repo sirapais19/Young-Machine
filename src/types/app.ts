@@ -140,6 +140,7 @@ export interface TeamLineup {
   id: string;
   tournamentId: string;
   name: string;
+  notes?: string;
   players: TeamLineupPlayer[];
   createdAt: string;
 }

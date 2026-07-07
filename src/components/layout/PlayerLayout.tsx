@@ -3,7 +3,8 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, CalendarDays, Dumbbell, BarChart3, User, Bell } from "lucide-react";
 import { YMLogo } from "@/components/ym/Logo";
 import { PlayerAvatar } from "@/components/ym/Avatar";
-import { currentUser } from "@/data/mockData";
+import { useAppData } from "@/hooks/useAppData";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -16,6 +17,10 @@ const tabs = [
 
 export function PlayerLayout({ title, children }: { title?: string; children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { currentUser } = useAuth();
+  const { data } = useAppData();
+  const player = data.players.find((item) => item.id === currentUser?.playerId) ?? data.players[0];
+  const unread = data.notifications.some((note) => !note.read && (note.targetRole === "all" || note.targetRole === "player"));
 
   return (
     <div className="grid-bg min-h-[100dvh] text-foreground">
@@ -35,10 +40,10 @@ export function PlayerLayout({ title, children }: { title?: string; children: Re
               aria-label="Notifications"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan shadow-[0_0_14px_var(--cyan)]" />
+              {unread && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan shadow-[0_0_14px_var(--cyan)]" />}
             </Link>
             <Link to="/player/profile">
-              <PlayerAvatar name={currentUser.name} hue={205} size={40} />
+              <PlayerAvatar name={player?.name ?? currentUser?.name ?? "Player"} hue={player?.avatarHue ?? 205} size={40} />
             </Link>
           </div>
         </div>

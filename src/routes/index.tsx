@@ -3,7 +3,7 @@ import { ArrowRight, Trophy, Users, CalendarDays, Sparkles, Target, Zap } from "
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { PlayerAvatar } from "@/components/ym/Avatar";
 import { StatusBadge } from "@/components/ym/StatusBadge";
-import { players, tournaments, achievements, galleryPhotos } from "@/data/mockData";
+import { useAppData } from "@/hooks/useAppData";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,8 +18,12 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const featured = players.filter(p => p.isPublic).slice(0, 4);
-  const nextTournament = tournaments.find(t => t.status === "Upcoming")!;
+  const { data } = useAppData();
+  const featured = data.players.filter((player) => player.isPublic).slice(0, 4);
+  const nextTournament = data.tournaments.find((tournament) => tournament.status === "Upcoming") ?? data.tournaments[0];
+  const achievements = data.achievements.filter((achievement) => achievement.status === "Published");
+  const publishedGalleryIds = new Set(data.galleries.filter((gallery) => gallery.status === "Published").map((gallery) => gallery.id));
+  const galleryPhotos = data.galleryImages.filter((image) => publishedGalleryIds.has(image.galleryId));
 
   return (
     <PublicLayout>
@@ -69,10 +73,10 @@ function HomePage() {
                 <div className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-cyan/20 blur-3xl" />
                 <div className="flex items-center justify-between">
                   <StatusBadge tone="cyan">Next Tournament</StatusBadge>
-                  <span className="text-xs text-silver-muted">{nextTournament.start}</span>
+                  <span className="text-xs text-silver-muted">{nextTournament?.start ?? "TBC"}</span>
                 </div>
-                <div className="mt-4 text-2xl sm:text-3xl font-bold">{nextTournament.name}</div>
-                <div className="text-silver-muted">{nextTournament.location}</div>
+                <div className="mt-4 text-2xl sm:text-3xl font-bold">{nextTournament?.name ?? "Season calendar"}</div>
+                <div className="text-silver-muted">{nextTournament?.location ?? "Young Machine"}</div>
 
                 <div className="mt-6 grid grid-cols-3 gap-3">
                   {featured.map((p) => (
@@ -154,13 +158,13 @@ function HomePage() {
             <CalendarDays className="h-4 w-4" />
             <span className="text-xs uppercase tracking-[0.2em]">Coming up</span>
           </div>
-          <h3 className="mt-2 text-2xl font-bold">{nextTournament.name}</h3>
-          <p className="mt-1 text-silver-muted">{nextTournament.description}</p>
+          <h3 className="mt-2 text-2xl font-bold">{nextTournament?.name ?? "Tournament schedule"}</h3>
+          <p className="mt-1 text-silver-muted">{nextTournament?.description ?? "Upcoming fixtures will appear here."}</p>
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div><div className="text-[10px] uppercase text-silver-muted">Location</div><div className="font-semibold">{nextTournament.location}</div></div>
-            <div><div className="text-[10px] uppercase text-silver-muted">Start</div><div className="font-semibold">{nextTournament.start}</div></div>
-            <div><div className="text-[10px] uppercase text-silver-muted">End</div><div className="font-semibold">{nextTournament.end}</div></div>
-            <div><div className="text-[10px] uppercase text-silver-muted">Status</div><StatusBadge tone="cyan">{nextTournament.status}</StatusBadge></div>
+            <div><div className="text-[10px] uppercase text-silver-muted">Location</div><div className="font-semibold">{nextTournament?.location ?? "TBC"}</div></div>
+            <div><div className="text-[10px] uppercase text-silver-muted">Start</div><div className="font-semibold">{nextTournament?.start ?? "TBC"}</div></div>
+            <div><div className="text-[10px] uppercase text-silver-muted">End</div><div className="font-semibold">{nextTournament?.end ?? "TBC"}</div></div>
+            <div><div className="text-[10px] uppercase text-silver-muted">Status</div><StatusBadge tone="cyan">{nextTournament?.status ?? "Draft"}</StatusBadge></div>
           </div>
         </div>
         <div className="panel p-6">
@@ -186,9 +190,9 @@ function HomePage() {
           <Link to="/gallery" className="text-sm text-cyan hover:underline">Full gallery →</Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {galleryPhotos.slice(0, 8).map((g) => (
+          {galleryPhotos.slice(0, 8).map((g, index) => (
             <div key={g.id} className="aspect-square rounded-xl overflow-hidden relative panel-hover"
-                 style={{ background: `linear-gradient(135deg, oklch(0.3 0.06 ${g.hue}), oklch(0.15 0.02 ${g.hue}))` }}>
+                 style={{ background: `linear-gradient(135deg, oklch(0.3 0.06 ${180 + index * 18}), oklch(0.15 0.02 ${180 + index * 18}))` }}>
               <div className="absolute inset-0 grid place-items-center text-silver-muted text-xs">{g.caption}</div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-2 left-2 text-[10px] uppercase tracking-widest text-cyan">{g.caption}</div>

@@ -35,31 +35,48 @@ export interface AppDataContextValue {
   addTraining: (training: Omit<TrainingSession, "id">) => TrainingSession;
   updateTraining: (training: UpdateInput<TrainingSession>) => void;
   deleteTraining: (trainingId: string) => void;
+  cancelTraining: (trainingId: string) => void;
   submitAttendance: (trainingId: string, playerId: string, response: AttendanceStatus) => void;
   updateAttendanceByCoach: (trainingId: string, playerId: string, coachStatus: AttendanceStatus) => void;
   addWorkoutPlan: (plan: Omit<WorkoutPlan, "id">, tasks?: Omit<WorkoutTask, "id" | "planId">[], playerIds?: string[]) => WorkoutPlan;
   updateWorkoutPlan: (plan: UpdateInput<WorkoutPlan>) => void;
   deleteWorkoutPlan: (planId: string) => void;
   addWorkoutTask: (planId: string, task: Omit<WorkoutTask, "id" | "planId">) => WorkoutTask;
+  updateWorkoutTask: (task: UpdateInput<WorkoutTask>) => void;
+  deleteWorkoutTask: (taskId: string) => void;
+  assignWorkoutPlayers: (planId: string, playerIds: string[]) => void;
+  updateWorkoutAssignments: (planId: string, playerIds: string[]) => void;
   submitWorkoutTask: (submission: Omit<WorkoutSubmission, "id" | "submittedAt" | "reviewed">) => WorkoutSubmission;
   reviewWorkoutSubmission: (submissionId: string) => void;
+  deleteWorkoutSubmission: (submissionId: string) => void;
   addTournament: (tournament: Omit<Tournament, "id">, playerIds?: string[]) => Tournament;
   updateTournament: (tournament: UpdateInput<Tournament>) => void;
   deleteTournament: (tournamentId: string) => void;
   selectTournamentPlayer: (tournamentId: string, playerId: string, role: "main player" | "reserve" | "captain") => void;
+  removeTournamentPlayer: (tournamentId: string, playerId: string) => void;
+  updateTournamentPlayerRole: (tournamentId: string, playerId: string, role: "main player" | "reserve" | "captain") => void;
   updateTournamentStats: (stats: Omit<TournamentStats, "id"> & { id?: string }) => void;
+  deleteTournamentStats: (statsId: string) => void;
   createLineup: (lineup: Omit<TeamLineup, "id" | "createdAt">) => TeamLineup;
   updateLineup: (lineup: UpdateInput<TeamLineup>) => void;
+  deleteLineup: (lineupId: string) => void;
   addFitnessRecord: (record: Omit<FitnessRecord, "id">) => FitnessRecord;
+  updateFitnessRecord: (record: UpdateInput<FitnessRecord>) => void;
+  deleteFitnessRecord: (recordId: string) => void;
   addInjuryRecord: (record: Omit<InjuryRecord, "id">) => InjuryRecord;
   updateInjuryRecord: (record: UpdateInput<InjuryRecord>) => void;
+  deleteInjuryRecord: (recordId: string) => void;
   markNotificationRead: (notificationId: string, read?: boolean) => void;
   addNotification: (notification: Omit<Notification, "id" | "time" | "read">) => Notification;
+  deleteNotification: (notificationId: string) => void;
   addAchievement: (achievement: Omit<Achievement, "id">) => Achievement;
   updateAchievement: (achievement: UpdateInput<Achievement>) => void;
   deleteAchievement: (achievementId: string) => void;
   addGallery: (gallery: Omit<Gallery, "id" | "createdAt">) => Gallery;
+  updateGallery: (gallery: UpdateInput<Gallery>) => void;
+  deleteGallery: (galleryId: string) => void;
   addGalleryImage: (image: Omit<GalleryImage, "id">) => GalleryImage;
+  deleteGalleryImage: (imageId: string) => void;
   updateClubPage: (page: UpdateInput<ClubPage>) => void;
 }
 
@@ -188,6 +205,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           attendanceRecords: current.attendanceRecords.filter((record) => record.trainingId !== trainingId),
         }));
       },
+      cancelTraining: (trainingId) => {
+        mutate((current) => ({
+          ...current,
+          trainingSessions: current.trainingSessions.map((training) =>
+            training.id === trainingId ? { ...training, status: "Cancelled" } : training,
+          ),
+        }));
+      },
       submitAttendance: (trainingId, playerId, response) => {
         mutate((current) => ({
           ...current,
@@ -247,6 +272,37 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         mutate((current) => ({ ...current, workoutTasks: [created, ...current.workoutTasks] }));
         return created;
       },
+      updateWorkoutTask: (task) => {
+        mutate((current) => ({
+          ...current,
+          workoutTasks: current.workoutTasks.map((item) => (item.id === task.id ? { ...item, ...task } : item)),
+        }));
+      },
+      deleteWorkoutTask: (taskId) => {
+        mutate((current) => ({
+          ...current,
+          workoutTasks: current.workoutTasks.filter((task) => task.id !== taskId),
+          workoutSubmissions: current.workoutSubmissions.filter((submission) => submission.taskId !== taskId),
+        }));
+      },
+      assignWorkoutPlayers: (planId, playerIds) => {
+        mutate((current) => ({
+          ...current,
+          workoutAssignments: [
+            ...current.workoutAssignments.filter((assignment) => assignment.planId !== planId),
+            ...playerIds.map((playerId) => ({ id: createId("wa"), planId, playerId })),
+          ],
+        }));
+      },
+      updateWorkoutAssignments: (planId, playerIds) => {
+        mutate((current) => ({
+          ...current,
+          workoutAssignments: [
+            ...current.workoutAssignments.filter((assignment) => assignment.planId !== planId),
+            ...playerIds.map((playerId) => ({ id: createId("wa"), planId, playerId })),
+          ],
+        }));
+      },
       submitWorkoutTask: (submission) => {
         const created: WorkoutSubmission = {
           ...submission,
@@ -267,6 +323,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         mutate((current) => ({
           ...current,
           workoutSubmissions: current.workoutSubmissions.map((item) => (item.id === submissionId ? { ...item, reviewed: true } : item)),
+        }));
+      },
+      deleteWorkoutSubmission: (submissionId) => {
+        mutate((current) => ({
+          ...current,
+          workoutSubmissions: current.workoutSubmissions.filter((submission) => submission.id !== submissionId),
         }));
       },
       addTournament: (tournament, playerIds = []) => {
@@ -320,6 +382,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           };
         });
       },
+      removeTournamentPlayer: (tournamentId, playerId) => {
+        mutate((current) => ({
+          ...current,
+          tournamentPlayers: current.tournamentPlayers.filter((item) => !(item.tournamentId === tournamentId && item.playerId === playerId)),
+          tournamentStats: current.tournamentStats.filter((item) => !(item.tournamentId === tournamentId && item.playerId === playerId)),
+        }));
+      },
+      updateTournamentPlayerRole: (tournamentId, playerId, role) => {
+        mutate((current) => ({
+          ...current,
+          tournamentPlayers: current.tournamentPlayers.map((item) =>
+            item.tournamentId === tournamentId && item.playerId === playerId ? { ...item, role } : item,
+          ),
+        }));
+      },
       updateTournamentStats: (stats) => {
         mutate((current) => {
           const id = stats.id ?? createId("ts");
@@ -330,6 +407,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             tournamentStats: exists ? current.tournamentStats.map((item) => (item.id === id ? next : item)) : [next, ...current.tournamentStats],
           };
         });
+      },
+      deleteTournamentStats: (statsId) => {
+        mutate((current) => ({
+          ...current,
+          tournamentStats: current.tournamentStats.filter((stats) => stats.id !== statsId),
+        }));
       },
       createLineup: (lineup) => {
         const created: TeamLineup = { ...lineup, id: createId("lineup"), createdAt: new Date().toISOString() };
@@ -342,10 +425,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           teamLineups: current.teamLineups.map((item) => (item.id === lineup.id ? { ...item, ...lineup } : item)),
         }));
       },
+      deleteLineup: (lineupId) => {
+        mutate((current) => ({
+          ...current,
+          teamLineups: current.teamLineups.filter((lineup) => lineup.id !== lineupId),
+        }));
+      },
       addFitnessRecord: (record) => {
         const created: FitnessRecord = { ...record, id: createId("fit") };
         mutate((current) => ({ ...current, fitnessRecords: [created, ...current.fitnessRecords] }));
         return created;
+      },
+      updateFitnessRecord: (record) => {
+        mutate((current) => ({
+          ...current,
+          fitnessRecords: current.fitnessRecords.map((item) => (item.id === record.id ? { ...item, ...record } : item)),
+        }));
+      },
+      deleteFitnessRecord: (recordId) => {
+        mutate((current) => ({
+          ...current,
+          fitnessRecords: current.fitnessRecords.filter((record) => record.id !== recordId),
+        }));
       },
       addInjuryRecord: (record) => {
         const created: InjuryRecord = { ...record, id: createId("inj") };
@@ -358,6 +459,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           injuryRecords: current.injuryRecords.map((item) => (item.id === record.id ? { ...item, ...record } : item)),
         }));
       },
+      deleteInjuryRecord: (recordId) => {
+        mutate((current) => ({
+          ...current,
+          injuryRecords: current.injuryRecords.filter((record) => record.id !== recordId),
+        }));
+      },
       markNotificationRead: (notificationId, read = true) => {
         mutate((current) => ({
           ...current,
@@ -365,6 +472,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }));
       },
       addNotification,
+      deleteNotification: (notificationId) => {
+        mutate((current) => ({
+          ...current,
+          notifications: current.notifications.filter((notification) => notification.id !== notificationId),
+        }));
+      },
       addAchievement: (achievement) => {
         const created: Achievement = { ...achievement, id: createId("ach") };
         mutate((current) => ({ ...current, achievements: [created, ...current.achievements] }));
@@ -384,10 +497,29 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         mutate((current) => ({ ...current, galleries: [created, ...current.galleries] }));
         return created;
       },
+      updateGallery: (gallery) => {
+        mutate((current) => ({
+          ...current,
+          galleries: current.galleries.map((item) => (item.id === gallery.id ? { ...item, ...gallery } : item)),
+        }));
+      },
+      deleteGallery: (galleryId) => {
+        mutate((current) => ({
+          ...current,
+          galleries: current.galleries.filter((gallery) => gallery.id !== galleryId),
+          galleryImages: current.galleryImages.filter((image) => image.galleryId !== galleryId),
+        }));
+      },
       addGalleryImage: (image) => {
         const created: GalleryImage = { ...image, id: createId("img") };
         mutate((current) => ({ ...current, galleryImages: [created, ...current.galleryImages] }));
         return created;
+      },
+      deleteGalleryImage: (imageId) => {
+        mutate((current) => ({
+          ...current,
+          galleryImages: current.galleryImages.filter((image) => image.id !== imageId),
+        }));
       },
       updateClubPage: (page) => {
         mutate((current) => ({

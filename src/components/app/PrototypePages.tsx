@@ -6,12 +6,15 @@ import {
   BarChart3,
   CalendarDays,
   Check,
+  Circle,
   ClipboardCheck,
   ClipboardList,
+  Clock,
   Dumbbell,
   Eye,
   HeartPulse,
   Image,
+  MapPin,
   Pencil,
   Plus,
   Save,
@@ -21,6 +24,7 @@ import {
   Trophy,
   Upload,
   Users2,
+  X,
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, Tooltip, BarChart, Bar, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -30,7 +34,7 @@ import { PlayerAvatar } from "@/components/ym/Avatar";
 import { StatusBadge } from "@/components/ym/StatusBadge";
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
-import type { AttendanceStatus, Player, Position, RecoveryStatus, TrainingStatus, WorkoutTaskType } from "@/types/app";
+import type { AttendanceStatus, Player, Position, RecoveryStatus, TournamentRole, TournamentStats, TrainingStatus, WorkoutTaskType } from "@/types/app";
 
 const positions: Position[] = ["Handler", "Cutter", "Hybrid", "Defender"];
 const injuryStatuses: (RecoveryStatus | "None")[] = ["None", "Active", "Recovering", "Recovered"];
@@ -377,7 +381,8 @@ export function TrainingCreatePage() {
 }
 
 export function TrainingDetailPage({ trainingId }: { trainingId: string }) {
-  const { data, updateTraining, updateAttendanceByCoach } = useAppData();
+  const { data, cancelTraining, deleteTraining, updateAttendanceByCoach } = useAppData();
+  const navigate = useNavigate();
   const training = data.trainingSessions.find((item) => item.id === trainingId);
   if (!training) return <MissingDashboard title="Training not found" />;
   const records = data.players.map((player) => ({
@@ -398,7 +403,19 @@ export function TrainingDetailPage({ trainingId }: { trainingId: string }) {
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link to="/dashboard/training/$trainingId/edit" params={{ trainingId }} className="rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-sm font-bold">Edit</Link>
-            <button onClick={() => updateTraining({ id: training.id, status: "Cancelled" })} className="rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm font-bold text-destructive">Cancel session</button>
+            <button onClick={() => { cancelTraining(training.id); toast.success("Training cancelled."); }} className="rounded-full border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-bold text-warning">Cancel session</button>
+            <button
+              onClick={() => {
+                if (window.confirm(`Delete ${training.title}? Attendance records for this session will also be removed.`)) {
+                  deleteTraining(training.id);
+                  toast.success("Training deleted.");
+                  navigate({ to: "/dashboard/training" });
+                }
+              }}
+              className="rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm font-bold text-destructive"
+            >
+              Delete
+            </button>
           </div>
         </div>
         <div className="panel p-5">
@@ -544,12 +561,37 @@ export function WorkoutCreatePage() {
         <TextField label="Description" value={plan.description} onChange={(value) => setPlan({ ...plan, description: value })} required />
         <TextField label="Start date" type="date" value={plan.start} onChange={(value) => setPlan({ ...plan, start: value })} required />
         <TextField label="End date" type="date" value={plan.end} onChange={(value) => setPlan({ ...plan, end: value })} required />
+        <Field label="Status"><Select value={plan.status} onChange={(value) => setPlan({ ...plan, status: value as typeof plan.status })} options={["Draft", "Active", "Completed"]} /></Field>
         <Field label="Task date"><input className={inputClass} type="date" value={task.date} onChange={(e) => setTask({ ...task, date: e.target.value })} /></Field>
         <TextField label="Day name" value={task.day} onChange={(value) => setTask({ ...task, day: value })} />
         <TextField label="Task title" value={task.title} onChange={(value) => setTask({ ...task, title: value })} />
         <TextField label="Task description" value={task.description} onChange={(value) => setTask({ ...task, description: value })} />
         <Field label="Task type"><Select value={task.type} onChange={(value) => setTask({ ...task, type: value as WorkoutTaskType })} options={workoutTypes} /></Field>
-        <button type="button" onClick={() => setTasks([...tasks, task])} className="rounded-full border border-cyan/30 bg-cyan/10 px-4 py-3 text-sm font-bold text-cyan">Add task to plan</button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!task.title.trim()) return toast.error("Add a task title first.");
+            setTasks([...tasks, task]);
+            setTask({ date: "", day: "", title: "", description: "", type: "Strength" });
+          }}
+          className="rounded-full border border-cyan/30 bg-cyan/10 px-4 py-3 text-sm font-bold text-cyan"
+        >
+          Add task to plan
+        </button>
+        {tasks.length > 0 && (
+          <div className="grid gap-2 sm:col-span-2">
+            <div className="text-sm font-semibold text-silver-muted">Task preview</div>
+            {tasks.map((item, index) => (
+              <div key={`${item.title}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2">
+                <div>
+                  <div className="text-sm font-bold">{item.title}</div>
+                  <div className="text-xs text-silver-muted">{item.day || item.date} | {item.type}</div>
+                </div>
+                <button type="button" onClick={() => setTasks(tasks.filter((_, taskIndex) => taskIndex !== index))} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
         <CheckboxGrid label="Assign to players" items={data.players.map((player) => ({ id: player.id, label: player.name }))} selected={selected} onChange={setSelected} />
       </FormShell>
     </DashboardLayout>
@@ -557,7 +599,8 @@ export function WorkoutCreatePage() {
 }
 
 export function WorkoutDetailPage({ workoutId }: { workoutId: string }) {
-  const { data } = useAppData();
+  const { data, deleteWorkoutPlan } = useAppData();
+  const navigate = useNavigate();
   const plan = data.workoutPlans.find((item) => item.id === workoutId);
   if (!plan) return <MissingDashboard title="Workout not found" />;
   const tasks = data.workoutTasks.filter((task) => task.planId === plan.id);
@@ -565,7 +608,29 @@ export function WorkoutDetailPage({ workoutId }: { workoutId: string }) {
   const submissions = data.workoutSubmissions.filter((submission) => submission.planId === plan.id);
   return (
     <DashboardLayout title={plan.title}>
-      <PageHeader eyebrow="Workout detail" title={plan.title} description={plan.description} action={<PrimaryLink to="/dashboard/workouts/$workoutId/edit" params={{ workoutId }} label="Edit plan" icon={Pencil} />} />
+      <PageHeader
+        eyebrow="Workout detail"
+        title={plan.title}
+        description={plan.description}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <PrimaryLink to="/dashboard/workouts/$workoutId/edit" params={{ workoutId }} label="Edit plan" icon={Pencil} />
+            <button
+              onClick={() => {
+                if (window.confirm(`Delete ${plan.title}? Tasks, assignments, and submissions will also be removed.`)) {
+                  deleteWorkoutPlan(plan.id);
+                  toast.success("Workout plan deleted.");
+                  navigate({ to: "/dashboard/workouts" });
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm font-bold text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+          </div>
+        }
+      />
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="grid gap-3">
           {tasks.map((task) => (
@@ -596,10 +661,11 @@ export function WorkoutDetailPage({ workoutId }: { workoutId: string }) {
 }
 
 export function WorkoutEditPage({ workoutId }: { workoutId: string }) {
-  const { data, updateWorkoutPlan } = useAppData();
+  const { data, updateWorkoutPlan, updateWorkoutAssignments } = useAppData();
   const navigate = useNavigate();
   const existing = data.workoutPlans.find((item) => item.id === workoutId);
   const [form, setForm] = useState(existing ?? { id: workoutId, title: "", description: "", start: "", end: "", status: "Active" as const });
+  const [selected, setSelected] = useState<string[]>(data.workoutAssignments.filter((assignment) => assignment.planId === workoutId).map((assignment) => assignment.playerId));
   if (!existing) return <MissingDashboard title="Workout not found" />;
   return (
     <DashboardLayout title="Edit workout">
@@ -608,6 +674,8 @@ export function WorkoutEditPage({ workoutId }: { workoutId: string }) {
         onSubmit={(e) => {
           e.preventDefault();
           updateWorkoutPlan(form);
+          updateWorkoutAssignments(workoutId, selected);
+          toast.success("Workout plan updated.");
           navigate({ to: "/dashboard/workouts/$workoutId", params: { workoutId } });
         }}
       >
@@ -615,18 +683,27 @@ export function WorkoutEditPage({ workoutId }: { workoutId: string }) {
         <TextField label="Description" value={form.description} onChange={(value) => setForm({ ...form, description: value })} required />
         <TextField label="Start date" type="date" value={form.start} onChange={(value) => setForm({ ...form, start: value })} required />
         <TextField label="End date" type="date" value={form.end} onChange={(value) => setForm({ ...form, end: value })} required />
+        <Field label="Status"><Select value={form.status} onChange={(value) => setForm({ ...form, status: value as typeof form.status })} options={["Draft", "Active", "Completed"]} /></Field>
+        <CheckboxGrid label="Assigned players" items={data.players.map((player) => ({ id: player.id, label: player.name }))} selected={selected} onChange={setSelected} />
       </FormShell>
     </DashboardLayout>
   );
 }
 
 export function SubmissionsPage() {
-  const { data, reviewWorkoutSubmission } = useAppData();
+  const { data, reviewWorkoutSubmission, deleteWorkoutSubmission } = useAppData();
+  const [playerFilter, setPlayerFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const submissions = data.workoutSubmissions.filter((submission) => (playerFilter === "All" || submission.playerId === playerFilter) && (statusFilter === "All" || submission.status === statusFilter));
   return (
     <DashboardLayout title="Workout Submissions">
       <PageHeader eyebrow="Review queue" title="Player workout submissions" description="Filter mentally by player, proof, note, and reviewed state." />
+      <div className="mb-5 grid gap-3 md:grid-cols-2">
+        <Select value={playerFilter} onChange={setPlayerFilter} options={["All", ...data.players.map((player) => player.id)]} labels={Object.fromEntries(data.players.map((player) => [player.id, player.name]))} />
+        <Select value={statusFilter} onChange={setStatusFilter} options={["All", "done", "not done"]} />
+      </div>
       <div className="grid gap-3">
-        {data.workoutSubmissions.map((submission) => {
+        {submissions.map((submission) => {
           const player = data.players.find((item) => item.id === submission.playerId);
           const task = data.workoutTasks.find((item) => item.id === submission.taskId);
           return (
@@ -636,9 +713,12 @@ export function SubmissionsPage() {
                   <div className="font-black">{player?.name} | {task?.title}</div>
                   <div className="text-sm text-silver-muted">{submission.status} | {submission.proofName ?? "No proof"} | {submission.note ?? "No note"}</div>
                 </div>
-                <button onClick={() => reviewWorkoutSubmission(submission.id)} className="rounded-full border border-cyan/30 bg-cyan/10 px-4 py-2 text-sm font-bold text-cyan">
-                  {submission.reviewed ? "Reviewed" : "Mark reviewed"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => reviewWorkoutSubmission(submission.id)} className="rounded-full border border-cyan/30 bg-cyan/10 px-4 py-2 text-sm font-bold text-cyan">
+                    {submission.reviewed ? "Reviewed" : "Mark reviewed"}
+                  </button>
+                  <button onClick={() => deleteWorkoutSubmission(submission.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm font-bold text-destructive">Delete</button>
+                </div>
               </div>
             </div>
           );
@@ -699,13 +779,36 @@ export function TournamentCreatePage() {
 }
 
 export function TournamentDetailPage({ tournamentId }: { tournamentId: string }) {
-  const { data, selectTournamentPlayer, updateTournamentStats } = useAppData();
+  const { data, deleteTournament, removeTournamentPlayer, selectTournamentPlayer, updateTournamentPlayerRole, updateTournamentStats, deleteTournamentStats } = useAppData();
+  const navigate = useNavigate();
   const tournament = data.tournaments.find((item) => item.id === tournamentId);
   if (!tournament) return <MissingDashboard title="Tournament not found" />;
   const selected = data.tournamentPlayers.filter((item) => item.tournamentId === tournament.id);
   return (
     <DashboardLayout title={tournament.name}>
-      <PageHeader eyebrow="Tournament detail" title={tournament.name} description={`${tournament.location} | ${tournament.start} to ${tournament.end}`} action={<PrimaryLink to="/dashboard/tournaments/$tournamentId/edit" params={{ tournamentId }} label="Edit tournament" icon={Pencil} />} />
+      <PageHeader
+        eyebrow="Tournament detail"
+        title={tournament.name}
+        description={`${tournament.location} | ${tournament.start} to ${tournament.end}`}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <PrimaryLink to="/dashboard/tournaments/$tournamentId/edit" params={{ tournamentId }} label="Edit tournament" icon={Pencil} />
+            <button
+              onClick={() => {
+                if (window.confirm(`Delete ${tournament.name}? Selected players, stats, and lineups will also be removed.`)) {
+                  deleteTournament(tournament.id);
+                  toast.success("Tournament deleted.");
+                  navigate({ to: "/dashboard/tournaments" });
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm font-bold text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+          </div>
+        }
+      />
       <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
         <div className="panel p-5">
           <div className="mb-4 text-xl font-black">Selected players</div>
@@ -720,7 +823,16 @@ export function TournamentDetailPage({ tournamentId }: { tournamentId: string })
                       <div className="font-bold">{player.name}</div>
                       <div className="text-xs text-silver-muted">{row?.role ?? "not selected"}</div>
                     </div>
-                    <Select value={row?.role ?? "reserve"} onChange={(value) => selectTournamentPlayer(tournament.id, player.id, value as "main player" | "reserve" | "captain")} options={["main player", "reserve", "captain"]} />
+                    {row ? (
+                      <>
+                        <Select value={row.role} onChange={(value) => updateTournamentPlayerRole(tournament.id, player.id, value as TournamentRole)} options={["main player", "reserve", "captain"]} />
+                        <button onClick={() => removeTournamentPlayer(tournament.id, player.id)} className="grid h-10 w-10 place-items-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive" aria-label={`Remove ${player.name}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => selectTournamentPlayer(tournament.id, player.id, "reserve")} className="rounded-xl border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs font-bold text-cyan">Add</button>
+                    )}
                   </div>
                 </div>
               );
@@ -733,28 +845,17 @@ export function TournamentDetailPage({ tournamentId }: { tournamentId: string })
             {selected.map((row) => {
               const player = data.players.find((item) => item.id === row.playerId);
               const stats = data.tournamentStats.find((item) => item.tournamentId === tournament.id && item.playerId === row.playerId);
-              return (
-                <button
+              return player ? (
+                <TournamentStatsEditor
                   key={row.id}
-                  onClick={() =>
-                    updateTournamentStats({
-                      id: stats?.id,
-                      tournamentId: tournament.id,
-                      playerId: row.playerId,
-                      score: (stats?.score ?? 0) + 1,
-                      assist: stats?.assist ?? 0,
-                      blocks: stats?.blocks ?? 0,
-                      turnovers: stats?.turnovers ?? 0,
-                      gamesPlayed: Math.max(1, stats?.gamesPlayed ?? 1),
-                      note: "Updated from detail page.",
-                    })
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left"
-                >
-                  <div className="font-bold">{player?.name}</div>
-                  <div className="text-xs text-silver-muted">{stats?.score ?? 0} score | {stats?.assist ?? 0} assist | {stats?.blocks ?? 0} blocks</div>
-                </button>
-              );
+                  playerName={player.name}
+                  stats={stats}
+                  tournamentId={tournament.id}
+                  playerId={row.playerId}
+                  onSave={updateTournamentStats}
+                  onDelete={stats ? deleteTournamentStats : undefined}
+                />
+              ) : null;
             })}
           </div>
           <Link to="/dashboard/team-lineup/create" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground glow-cyan">
@@ -788,7 +889,7 @@ export function TournamentEditPage({ tournamentId }: { tournamentId: string }) {
 }
 
 export function TeamLineupPage() {
-  const { data } = useAppData();
+  const { data, deleteLineup } = useAppData();
   return (
     <DashboardLayout title="Team Lineup">
       <PageHeader eyebrow="Line builder" title="Tournament lineups" description="Visualize line order and player positions." action={<PrimaryLink to="/dashboard/team-lineup/create" label="Create lineup" icon={Plus} />} />
@@ -800,7 +901,20 @@ export function TeamLineupPage() {
                 <div className="text-xl font-black">{lineup.name}</div>
                 <div className="text-xs text-silver-muted">{data.tournaments.find((item) => item.id === lineup.tournamentId)?.name}</div>
               </div>
+              <button
+                onClick={() => {
+                  if (window.confirm(`Delete ${lineup.name}?`)) {
+                    deleteLineup(lineup.id);
+                    toast.success("Lineup deleted.");
+                  }
+                }}
+                className="grid h-10 w-10 place-items-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive"
+                aria-label={`Delete ${lineup.name}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
+            {lineup.notes && <p className="mb-4 text-sm text-silver-muted">{lineup.notes}</p>}
             <div className="grid gap-3 md:grid-cols-4">
               {lineup.players.sort((a, b) => a.lineOrder - b.lineOrder).map((entry) => {
                 const player = data.players.find((item) => item.id === entry.playerId);
@@ -818,6 +932,7 @@ export function TeamLineupCreatePage() {
   const { data, createLineup } = useAppData();
   const navigate = useNavigate();
   const [name, setName] = useState("");
+  const [notes, setNotes] = useState("");
   const [tournamentId, setTournamentId] = useState(data.tournaments[0]?.id ?? "");
   const [selected, setSelected] = useState<string[]>(data.players.slice(0, 7).map((player) => player.id));
   const save = (e: React.FormEvent) => {
@@ -825,6 +940,7 @@ export function TeamLineupCreatePage() {
     createLineup({
       name,
       tournamentId,
+      notes,
       players: selected.map((playerId, index) => ({ id: `${playerId}-${index}`, playerId, position: data.players.find((player) => player.id === playerId)?.position ?? "Hybrid", lineOrder: index + 1 })),
     });
     navigate({ to: "/dashboard/team-lineup" });
@@ -833,6 +949,7 @@ export function TeamLineupCreatePage() {
     <DashboardLayout title="Create lineup">
       <FormShell title="Create tournament lineup" onSubmit={save}>
         <TextField label="Lineup name" value={name} onChange={setName} required />
+        <TextField label="Notes" value={notes} onChange={setNotes} />
         <Field label="Tournament"><Select value={tournamentId} onChange={setTournamentId} options={data.tournaments.map((item) => item.id)} labels={Object.fromEntries(data.tournaments.map((item) => [item.id, item.name]))} /></Field>
         <CheckboxGrid label="Players" items={data.players.map((player) => ({ id: player.id, label: player.name }))} selected={selected} onChange={setSelected} />
       </FormShell>
@@ -841,7 +958,7 @@ export function TeamLineupCreatePage() {
 }
 
 export function FitnessManagerPage() {
-  const { data, addFitnessRecord } = useAppData();
+  const { data, addFitnessRecord, updateFitnessRecord, deleteFitnessRecord } = useAppData();
   const [playerId, setPlayerId] = useState(data.players[0]?.id ?? "");
   const records = data.fitnessRecords.filter((record) => record.playerId === playerId);
   return (
@@ -849,13 +966,28 @@ export function FitnessManagerPage() {
       <PageHeader eyebrow="Fitness testing" title="Player fitness progression" description="Add records and review weight, sprint, and score trends." />
       <FitnessRecordForm playerId={playerId} setPlayerId={setPlayerId} onSave={addFitnessRecord} />
       <FitnessChart records={records} />
-      <SimpleList rows={records.map((record) => ({ title: `${record.date} | Score ${record.fitnessScore}`, meta: `${record.weightKg}kg | ${record.sprintSeconds}s | ${record.endurance}` }))} />
+      <div className="grid gap-3">
+        {records.map((record) => (
+          <div key={record.id} className="panel p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="font-black">{record.date} | Score {record.fitnessScore}</div>
+                <div className="text-sm text-silver-muted">{record.weightKg}kg | {record.sprintSeconds}s | {record.endurance} | {record.note ?? "No notes"}</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => updateFitnessRecord({ id: record.id, fitnessScore: record.fitnessScore + 1 })} className="rounded-full border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs font-bold text-cyan">+ Score</button>
+                <button onClick={() => deleteFitnessRecord(record.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive">Delete</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </DashboardLayout>
   );
 }
 
 export function InjuriesManagerPage() {
-  const { data, addInjuryRecord, updateInjuryRecord } = useAppData();
+  const { data, addInjuryRecord, updateInjuryRecord, deleteInjuryRecord } = useAppData();
   const [playerId, setPlayerId] = useState(data.players[0]?.id ?? "");
   const [type, setType] = useState("");
   const [status, setStatus] = useState<RecoveryStatus>("Active");
@@ -885,7 +1017,10 @@ export function InjuriesManagerPage() {
                   <div className="font-black">{player?.name} | {record.type}</div>
                   <div className="text-sm text-silver-muted">{record.date} | return {record.expectedReturn || "TBC"}</div>
                 </div>
-                <Select value={record.status} onChange={(value) => updateInjuryRecord({ id: record.id, status: value as RecoveryStatus })} options={["Active", "Recovering", "Recovered"]} />
+                <div className="flex flex-wrap gap-2">
+                  <Select value={record.status} onChange={(value) => updateInjuryRecord({ id: record.id, status: value as RecoveryStatus })} options={["Active", "Recovering", "Recovered"]} />
+                  <button onClick={() => deleteInjuryRecord(record.id)} className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive">Delete</button>
+                </div>
               </div>
             </div>
           );
@@ -915,7 +1050,7 @@ export function StatsManagerPage() {
 }
 
 export function NotificationsPage({ playerMode = false }: { playerMode?: boolean }) {
-  const { data, markNotificationRead, addNotification } = useAppData();
+  const { data, markNotificationRead, addNotification, deleteNotification } = useAppData();
   const navigate = useNavigate();
   const [body, setBody] = useState("");
   const Layout = playerMode ? PlayerLayout : DashboardLayout;
@@ -936,7 +1071,7 @@ export function NotificationsPage({ playerMode = false }: { playerMode?: boolean
       )}
       <div className="grid gap-3">
         {data.notifications.map((note) => (
-          <button key={note.id} onClick={() => { markNotificationRead(note.id); if (note.relatedPath) navigate({ to: note.relatedPath }); }} className={`panel p-4 text-left ${note.read ? "opacity-70" : ""}`}>
+          <article key={note.id} className={`panel p-4 ${note.read ? "opacity-70" : ""}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="font-black">{note.title}</div>
@@ -944,7 +1079,12 @@ export function NotificationsPage({ playerMode = false }: { playerMode?: boolean
               </div>
               <StatusBadge tone={note.read ? "silver" : "cyan"}>{note.type}</StatusBadge>
             </div>
-          </button>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={() => markNotificationRead(note.id, !note.read)} className="rounded-full border border-white/10 px-3 py-2 text-xs font-bold">{note.read ? "Mark unread" : "Mark read"}</button>
+              {note.relatedPath && <button onClick={() => { markNotificationRead(note.id); navigate({ to: note.relatedPath }); }} className="rounded-full border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs font-bold text-cyan">Open</button>}
+              {!playerMode && <button onClick={() => deleteNotification(note.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive">Delete</button>}
+            </div>
+          </article>
         ))}
       </div>
     </Layout>
@@ -983,7 +1123,7 @@ export function AchievementsManagerPage() {
 }
 
 export function GalleryManagerPage() {
-  const { data, addGallery, addGalleryImage } = useAppData();
+  const { data, addGallery, addGalleryImage, updateGallery, deleteGallery, deleteGalleryImage } = useAppData();
   const [title, setTitle] = useState("");
   return (
     <DashboardLayout title="Gallery Manager">
@@ -995,10 +1135,30 @@ export function GalleryManagerPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {data.galleries.map((gallery) => (
           <div key={gallery.id} className="panel p-5">
-            <div className="text-xl font-black">{gallery.title}</div>
-            <div className="mt-1 text-sm text-silver-muted">{gallery.description} | {gallery.status}</div>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xl font-black">{gallery.title}</div>
+                <div className="mt-1 text-sm text-silver-muted">{gallery.description} | {gallery.status}</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => updateGallery({ id: gallery.id, status: gallery.status === "Published" ? "Draft" : "Published" })} className="rounded-full border border-white/10 px-3 py-2 text-xs font-bold">Toggle</button>
+                <button onClick={() => deleteGallery(gallery.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive">Delete</button>
+              </div>
+            </div>
             <input className="mt-4 block w-full text-sm" type="file" onChange={(e) => e.target.files?.[0] && addGalleryImage({ galleryId: gallery.id, caption: e.target.files[0].name, fileName: e.target.files[0].name, date: new Date().toISOString().slice(0, 10) })} />
-            <SimpleList rows={data.galleryImages.filter((image) => image.galleryId === gallery.id).map((image) => ({ title: image.caption, meta: image.fileName }))} />
+            <div className="mt-4 grid gap-2">
+              {data.galleryImages.filter((image) => image.galleryId === gallery.id).map((image) => (
+                <div key={image.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-bold">{image.caption}</div>
+                    <div className="truncate text-xs text-silver-muted">{image.fileName}</div>
+                  </div>
+                  <button onClick={() => deleteGalleryImage(image.id)} className="text-destructive" aria-label={`Delete ${image.caption}`}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -1025,26 +1185,49 @@ export function PlayerTrainingPage() {
   const { data, submitAttendance } = useAppData();
   const { currentUser } = useAuth();
   const playerId = currentUser?.playerId ?? "p1";
+  const sessions = [...data.trainingSessions].sort((a, b) => a.date.localeCompare(b.date));
   return (
     <PlayerLayout title="Training">
-      <div className="space-y-3">
-        {data.trainingSessions.map((training) => {
+      <div className="mx-auto max-w-3xl space-y-4">
+        <section className="panel p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan">Session response</div>
+          <h1 className="mt-2 text-2xl font-black">Choose your availability</h1>
+          <p className="mt-2 text-sm leading-6 text-silver-muted">Your response updates instantly for the coaching team. Cards stay stable on mobile and desktop with no sticky controls.</p>
+        </section>
+        {sessions.map((training) => {
           const record = data.attendanceRecords.find((item) => item.trainingId === training.id && item.playerId === playerId);
           return (
-            <div key={training.id} className="panel p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-black">{training.title}</div>
-                  <div className="mt-1 text-xs text-silver-muted">{training.date} | {training.start} to {training.end} | {training.location}</div>
+            <article key={training.id} className="panel panel-hover overflow-hidden p-0">
+              <div className="border-b border-white/10 bg-white/[0.025] p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-xl font-black">{training.title}</h2>
+                    <div className="mt-3 grid gap-2 text-sm text-silver-muted sm:grid-cols-3">
+                      <PlayerInfoLine icon={CalendarDays} text={training.date} />
+                      <PlayerInfoLine icon={Clock} text={`${training.start} - ${training.end}`} />
+                      <PlayerInfoLine icon={MapPin} text={training.location} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 sm:justify-end">
+                    <StatusBadge tone={training.status === "Upcoming" ? "cyan" : training.status === "Completed" ? "green" : "red"}>{training.status}</StatusBadge>
+                    <StatusBadge tone={record?.response === "Going" ? "green" : record?.response === "Out" ? "red" : record?.response === "Maybe" ? "amber" : "silver"}>{record?.response ?? "No response"}</StatusBadge>
+                  </div>
                 </div>
-                <StatusBadge tone="cyan">{record?.response ?? "No response"}</StatusBadge>
               </div>
-              <div className="sticky bottom-20 mt-4 grid grid-cols-3 gap-2">
-                {(["Going", "Maybe", "Out"] as AttendanceStatus[]).map((status) => (
-                  <button key={status} onClick={() => submitAttendance(training.id, playerId, status)} className="rounded-2xl border border-cyan/25 bg-cyan/10 py-3 text-sm font-bold text-cyan">{status}</button>
-                ))}
+              <div className="p-4 sm:p-5">
+                {training.note && <p className="mb-4 text-sm leading-6 text-silver-muted">{training.note}</p>}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <PlayerAttendanceButton status="Going" active={record?.response === "Going"} icon={Check} onClick={() => submitAttendance(training.id, playerId, "Going")} />
+                  <PlayerAttendanceButton status="Maybe" active={record?.response === "Maybe"} icon={Circle} onClick={() => submitAttendance(training.id, playerId, "Maybe")} />
+                  <PlayerAttendanceButton status="Out" active={record?.response === "Out"} icon={X} onClick={() => submitAttendance(training.id, playerId, "Out")} />
+                </div>
+                {record?.coachStatus && (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-silver-muted">
+                    Coach mark: <span className="font-bold text-silver">{record.coachStatus}</span>
+                  </div>
+                )}
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
@@ -1342,6 +1525,103 @@ function CheckboxGrid({ label, items, selected, onChange }: { label: string; ite
         ))}
       </div>
     </div>
+  );
+}
+
+function TournamentStatsEditor({
+  playerName,
+  stats,
+  tournamentId,
+  playerId,
+  onSave,
+  onDelete,
+}: {
+  playerName: string;
+  stats?: TournamentStats;
+  tournamentId: string;
+  playerId: string;
+  onSave: (stats: Omit<TournamentStats, "id"> & { id?: string }) => void;
+  onDelete?: (statsId: string) => void;
+}) {
+  const [form, setForm] = useState({
+    score: String(stats?.score ?? 0),
+    assist: String(stats?.assist ?? 0),
+    blocks: String(stats?.blocks ?? 0),
+    turnovers: String(stats?.turnovers ?? 0),
+    gamesPlayed: String(stats?.gamesPlayed ?? 1),
+    note: stats?.note ?? "",
+  });
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave({
+          id: stats?.id,
+          tournamentId,
+          playerId,
+          score: Number(form.score),
+          assist: Number(form.assist),
+          blocks: Number(form.blocks),
+          turnovers: Number(form.turnovers),
+          gamesPlayed: Number(form.gamesPlayed),
+          note: form.note,
+        });
+        toast.success(`${playerName} stats saved.`);
+      }}
+      className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"
+    >
+      <div className="mb-3 font-bold">{playerName}</div>
+      <div className="grid grid-cols-2 gap-2">
+        <input className={inputClass} type="number" min="0" value={form.score} onChange={(event) => setForm({ ...form, score: event.target.value })} aria-label={`${playerName} score`} />
+        <input className={inputClass} type="number" min="0" value={form.assist} onChange={(event) => setForm({ ...form, assist: event.target.value })} aria-label={`${playerName} assist`} />
+        <input className={inputClass} type="number" min="0" value={form.blocks} onChange={(event) => setForm({ ...form, blocks: event.target.value })} aria-label={`${playerName} blocks`} />
+        <input className={inputClass} type="number" min="0" value={form.turnovers} onChange={(event) => setForm({ ...form, turnovers: event.target.value })} aria-label={`${playerName} turnovers`} />
+      </div>
+      <input className={`${inputClass} mt-2`} type="number" min="1" value={form.gamesPlayed} onChange={(event) => setForm({ ...form, gamesPlayed: event.target.value })} aria-label={`${playerName} games played`} />
+      <input className={`${inputClass} mt-2`} value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="Note" />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">Save stats</button>
+        {stats && onDelete && <button type="button" onClick={() => onDelete(stats.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs font-bold text-destructive">Delete stats</button>}
+      </div>
+    </form>
+  );
+}
+
+function PlayerInfoLine({ icon: Icon, text }: { icon: typeof CalendarDays; text: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Icon className="h-4 w-4 shrink-0 text-cyan" />
+      <span className="truncate">{text}</span>
+    </div>
+  );
+}
+
+function PlayerAttendanceButton({
+  status,
+  active,
+  icon: Icon,
+  onClick,
+}: {
+  status: Extract<AttendanceStatus, "Going" | "Maybe" | "Out">;
+  active: boolean;
+  icon: typeof Check;
+  onClick: () => void;
+}) {
+  const toneClass = {
+    Going: active ? "border-success/45 bg-success/15 text-success shadow-[0_0_24px_color-mix(in_oklab,var(--success)_30%,transparent)]" : "border-success/20 bg-success/5 text-success",
+    Maybe: active ? "border-warning/45 bg-warning/15 text-warning shadow-[0_0_24px_color-mix(in_oklab,var(--warning)_28%,transparent)]" : "border-warning/20 bg-warning/5 text-warning",
+    Out: active ? "border-destructive/45 bg-destructive/15 text-destructive shadow-[0_0_24px_color-mix(in_oklab,var(--destructive)_28%,transparent)]" : "border-destructive/20 bg-destructive/5 text-destructive",
+  }[status];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black transition duration-300 hover:-translate-y-0.5 hover:bg-white/[0.06] ${toneClass}`}
+    >
+      <Icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+      {status}
+    </button>
   );
 }
 
