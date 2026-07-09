@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
+  Crosshair,
   Dumbbell,
   Globe,
   HeartPulse,
@@ -55,6 +56,7 @@ const groups = [
     items: [
       { to: "/dashboard/tournaments", label: "Tournaments", icon: Trophy },
       { to: "/dashboard/team-lineup", label: "Team Lineup", icon: Users2 },
+      { to: "/dashboard/tactical", label: "Tactical Lab", icon: Crosshair },
     ],
   },
   {

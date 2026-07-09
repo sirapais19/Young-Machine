@@ -25,6 +25,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as PlayerWorkoutsRouteImport } from './routes/player.workouts'
 import { Route as PlayerTrainingRouteImport } from './routes/player.training'
 import { Route as PlayerTournamentsRouteImport } from './routes/player.tournaments'
+import { Route as PlayerTacticsRouteImport } from './routes/player.tactics'
 import { Route as PlayerSubmissionsRouteImport } from './routes/player.submissions'
 import { Route as PlayerStatsRouteImport } from './routes/player.stats'
 import { Route as PlayerSettingsRouteImport } from './routes/player.settings'
@@ -38,6 +39,7 @@ import { Route as DashboardWorkoutsRouteImport } from './routes/dashboard.workou
 import { Route as DashboardTrainingRouteImport } from './routes/dashboard.training'
 import { Route as DashboardTournamentsRouteImport } from './routes/dashboard.tournaments'
 import { Route as DashboardTeamLineupRouteImport } from './routes/dashboard.team-lineup'
+import { Route as DashboardTacticalRouteImport } from './routes/dashboard.tactical'
 import { Route as DashboardSubmissionsRouteImport } from './routes/dashboard.submissions'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
@@ -51,6 +53,7 @@ import { Route as DashboardAttendanceRouteImport } from './routes/dashboard.atte
 import { Route as DashboardAchievementsRouteImport } from './routes/dashboard.achievements'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as PlayerTacticsTacticalIdRouteImport } from './routes/player.tactics.$tacticalId'
 import { Route as DashboardWorkoutsCreateRouteImport } from './routes/dashboard.workouts.create'
 import { Route as DashboardWorkoutsWorkoutIdRouteImport } from './routes/dashboard.workouts.$workoutId'
 import { Route as DashboardTrainingCreateRouteImport } from './routes/dashboard.training.create'
@@ -58,12 +61,15 @@ import { Route as DashboardTrainingTrainingIdRouteImport } from './routes/dashbo
 import { Route as DashboardTournamentsCreateRouteImport } from './routes/dashboard.tournaments.create'
 import { Route as DashboardTournamentsTournamentIdRouteImport } from './routes/dashboard.tournaments.$tournamentId'
 import { Route as DashboardTeamLineupCreateRouteImport } from './routes/dashboard.team-lineup.create'
+import { Route as DashboardTacticalCreateRouteImport } from './routes/dashboard.tactical.create'
+import { Route as DashboardTacticalTacticalIdRouteImport } from './routes/dashboard.tactical.$tacticalId'
 import { Route as DashboardPlayersCreateRouteImport } from './routes/dashboard.players.create'
 import { Route as DashboardPlayersPlayerIdRouteImport } from './routes/dashboard.players.$playerId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DashboardWorkoutsWorkoutIdEditRouteImport } from './routes/dashboard.workouts.$workoutId.edit'
 import { Route as DashboardTrainingTrainingIdEditRouteImport } from './routes/dashboard.training.$trainingId.edit'
 import { Route as DashboardTournamentsTournamentIdEditRouteImport } from './routes/dashboard.tournaments.$tournamentId.edit'
+import { Route as DashboardTacticalTacticalIdEditRouteImport } from './routes/dashboard.tactical.$tacticalId.edit'
 import { Route as DashboardPlayersPlayerIdEditRouteImport } from './routes/dashboard.players.$playerId.edit'
 
 const TournamentsRoute = TournamentsRouteImport.update({
@@ -146,6 +152,11 @@ const PlayerTournamentsRoute = PlayerTournamentsRouteImport.update({
   path: '/tournaments',
   getParentRoute: () => PlayerRoute,
 } as any)
+const PlayerTacticsRoute = PlayerTacticsRouteImport.update({
+  id: '/tactics',
+  path: '/tactics',
+  getParentRoute: () => PlayerRoute,
+} as any)
 const PlayerSubmissionsRoute = PlayerSubmissionsRouteImport.update({
   id: '/submissions',
   path: '/submissions',
@@ -209,6 +220,11 @@ const DashboardTournamentsRoute = DashboardTournamentsRouteImport.update({
 const DashboardTeamLineupRoute = DashboardTeamLineupRouteImport.update({
   id: '/team-lineup',
   path: '/team-lineup',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTacticalRoute = DashboardTacticalRouteImport.update({
+  id: '/tactical',
+  path: '/tactical',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSubmissionsRoute = DashboardSubmissionsRouteImport.update({
@@ -278,6 +294,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const PlayerTacticsTacticalIdRoute = PlayerTacticsTacticalIdRouteImport.update({
+  id: '/$tacticalId',
+  path: '/$tacticalId',
+  getParentRoute: () => PlayerTacticsRoute,
+} as any)
 const DashboardWorkoutsCreateRoute = DashboardWorkoutsCreateRouteImport.update({
   id: '/create',
   path: '/create',
@@ -318,6 +339,17 @@ const DashboardTeamLineupCreateRoute =
     path: '/create',
     getParentRoute: () => DashboardTeamLineupRoute,
   } as any)
+const DashboardTacticalCreateRoute = DashboardTacticalCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => DashboardTacticalRoute,
+} as any)
+const DashboardTacticalTacticalIdRoute =
+  DashboardTacticalTacticalIdRouteImport.update({
+    id: '/$tacticalId',
+    path: '/$tacticalId',
+    getParentRoute: () => DashboardTacticalRoute,
+  } as any)
 const DashboardPlayersCreateRoute = DashboardPlayersCreateRouteImport.update({
   id: '/create',
   path: '/create',
@@ -353,6 +385,12 @@ const DashboardTournamentsTournamentIdEditRoute =
     path: '/edit',
     getParentRoute: () => DashboardTournamentsTournamentIdRoute,
   } as any)
+const DashboardTacticalTacticalIdEditRoute =
+  DashboardTacticalTacticalIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardTacticalTacticalIdRoute,
+  } as any)
 const DashboardPlayersPlayerIdEditRoute =
   DashboardPlayersPlayerIdEditRouteImport.update({
     id: '/edit',
@@ -386,6 +424,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/submissions': typeof DashboardSubmissionsRoute
+  '/dashboard/tactical': typeof DashboardTacticalRouteWithChildren
   '/dashboard/team-lineup': typeof DashboardTeamLineupRouteWithChildren
   '/dashboard/tournaments': typeof DashboardTournamentsRouteWithChildren
   '/dashboard/training': typeof DashboardTrainingRouteWithChildren
@@ -399,6 +438,7 @@ export interface FileRoutesByFullPath {
   '/player/settings': typeof PlayerSettingsRoute
   '/player/stats': typeof PlayerStatsRoute
   '/player/submissions': typeof PlayerSubmissionsRoute
+  '/player/tactics': typeof PlayerTacticsRouteWithChildren
   '/player/tournaments': typeof PlayerTournamentsRoute
   '/player/training': typeof PlayerTrainingRoute
   '/player/workouts': typeof PlayerWorkoutsRoute
@@ -406,6 +446,8 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/dashboard/players/$playerId': typeof DashboardPlayersPlayerIdRouteWithChildren
   '/dashboard/players/create': typeof DashboardPlayersCreateRoute
+  '/dashboard/tactical/$tacticalId': typeof DashboardTacticalTacticalIdRouteWithChildren
+  '/dashboard/tactical/create': typeof DashboardTacticalCreateRoute
   '/dashboard/team-lineup/create': typeof DashboardTeamLineupCreateRoute
   '/dashboard/tournaments/$tournamentId': typeof DashboardTournamentsTournamentIdRouteWithChildren
   '/dashboard/tournaments/create': typeof DashboardTournamentsCreateRoute
@@ -413,7 +455,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/training/create': typeof DashboardTrainingCreateRoute
   '/dashboard/workouts/$workoutId': typeof DashboardWorkoutsWorkoutIdRouteWithChildren
   '/dashboard/workouts/create': typeof DashboardWorkoutsCreateRoute
+  '/player/tactics/$tacticalId': typeof PlayerTacticsTacticalIdRoute
   '/dashboard/players/$playerId/edit': typeof DashboardPlayersPlayerIdEditRoute
+  '/dashboard/tactical/$tacticalId/edit': typeof DashboardTacticalTacticalIdEditRoute
   '/dashboard/tournaments/$tournamentId/edit': typeof DashboardTournamentsTournamentIdEditRoute
   '/dashboard/training/$trainingId/edit': typeof DashboardTrainingTrainingIdEditRoute
   '/dashboard/workouts/$workoutId/edit': typeof DashboardWorkoutsWorkoutIdEditRoute
@@ -443,6 +487,7 @@ export interface FileRoutesByTo {
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/submissions': typeof DashboardSubmissionsRoute
+  '/dashboard/tactical': typeof DashboardTacticalRouteWithChildren
   '/dashboard/team-lineup': typeof DashboardTeamLineupRouteWithChildren
   '/dashboard/tournaments': typeof DashboardTournamentsRouteWithChildren
   '/dashboard/training': typeof DashboardTrainingRouteWithChildren
@@ -456,6 +501,7 @@ export interface FileRoutesByTo {
   '/player/settings': typeof PlayerSettingsRoute
   '/player/stats': typeof PlayerStatsRoute
   '/player/submissions': typeof PlayerSubmissionsRoute
+  '/player/tactics': typeof PlayerTacticsRouteWithChildren
   '/player/tournaments': typeof PlayerTournamentsRoute
   '/player/training': typeof PlayerTrainingRoute
   '/player/workouts': typeof PlayerWorkoutsRoute
@@ -463,6 +509,8 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/dashboard/players/$playerId': typeof DashboardPlayersPlayerIdRouteWithChildren
   '/dashboard/players/create': typeof DashboardPlayersCreateRoute
+  '/dashboard/tactical/$tacticalId': typeof DashboardTacticalTacticalIdRouteWithChildren
+  '/dashboard/tactical/create': typeof DashboardTacticalCreateRoute
   '/dashboard/team-lineup/create': typeof DashboardTeamLineupCreateRoute
   '/dashboard/tournaments/$tournamentId': typeof DashboardTournamentsTournamentIdRouteWithChildren
   '/dashboard/tournaments/create': typeof DashboardTournamentsCreateRoute
@@ -470,7 +518,9 @@ export interface FileRoutesByTo {
   '/dashboard/training/create': typeof DashboardTrainingCreateRoute
   '/dashboard/workouts/$workoutId': typeof DashboardWorkoutsWorkoutIdRouteWithChildren
   '/dashboard/workouts/create': typeof DashboardWorkoutsCreateRoute
+  '/player/tactics/$tacticalId': typeof PlayerTacticsTacticalIdRoute
   '/dashboard/players/$playerId/edit': typeof DashboardPlayersPlayerIdEditRoute
+  '/dashboard/tactical/$tacticalId/edit': typeof DashboardTacticalTacticalIdEditRoute
   '/dashboard/tournaments/$tournamentId/edit': typeof DashboardTournamentsTournamentIdEditRoute
   '/dashboard/training/$trainingId/edit': typeof DashboardTrainingTrainingIdEditRoute
   '/dashboard/workouts/$workoutId/edit': typeof DashboardWorkoutsWorkoutIdEditRoute
@@ -502,6 +552,7 @@ export interface FileRoutesById {
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/submissions': typeof DashboardSubmissionsRoute
+  '/dashboard/tactical': typeof DashboardTacticalRouteWithChildren
   '/dashboard/team-lineup': typeof DashboardTeamLineupRouteWithChildren
   '/dashboard/tournaments': typeof DashboardTournamentsRouteWithChildren
   '/dashboard/training': typeof DashboardTrainingRouteWithChildren
@@ -515,6 +566,7 @@ export interface FileRoutesById {
   '/player/settings': typeof PlayerSettingsRoute
   '/player/stats': typeof PlayerStatsRoute
   '/player/submissions': typeof PlayerSubmissionsRoute
+  '/player/tactics': typeof PlayerTacticsRouteWithChildren
   '/player/tournaments': typeof PlayerTournamentsRoute
   '/player/training': typeof PlayerTrainingRoute
   '/player/workouts': typeof PlayerWorkoutsRoute
@@ -522,6 +574,8 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/dashboard/players/$playerId': typeof DashboardPlayersPlayerIdRouteWithChildren
   '/dashboard/players/create': typeof DashboardPlayersCreateRoute
+  '/dashboard/tactical/$tacticalId': typeof DashboardTacticalTacticalIdRouteWithChildren
+  '/dashboard/tactical/create': typeof DashboardTacticalCreateRoute
   '/dashboard/team-lineup/create': typeof DashboardTeamLineupCreateRoute
   '/dashboard/tournaments/$tournamentId': typeof DashboardTournamentsTournamentIdRouteWithChildren
   '/dashboard/tournaments/create': typeof DashboardTournamentsCreateRoute
@@ -529,7 +583,9 @@ export interface FileRoutesById {
   '/dashboard/training/create': typeof DashboardTrainingCreateRoute
   '/dashboard/workouts/$workoutId': typeof DashboardWorkoutsWorkoutIdRouteWithChildren
   '/dashboard/workouts/create': typeof DashboardWorkoutsCreateRoute
+  '/player/tactics/$tacticalId': typeof PlayerTacticsTacticalIdRoute
   '/dashboard/players/$playerId/edit': typeof DashboardPlayersPlayerIdEditRoute
+  '/dashboard/tactical/$tacticalId/edit': typeof DashboardTacticalTacticalIdEditRoute
   '/dashboard/tournaments/$tournamentId/edit': typeof DashboardTournamentsTournamentIdEditRoute
   '/dashboard/training/$trainingId/edit': typeof DashboardTrainingTrainingIdEditRoute
   '/dashboard/workouts/$workoutId/edit': typeof DashboardWorkoutsWorkoutIdEditRoute
@@ -562,6 +618,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/submissions'
+    | '/dashboard/tactical'
     | '/dashboard/team-lineup'
     | '/dashboard/tournaments'
     | '/dashboard/training'
@@ -575,6 +632,7 @@ export interface FileRouteTypes {
     | '/player/settings'
     | '/player/stats'
     | '/player/submissions'
+    | '/player/tactics'
     | '/player/tournaments'
     | '/player/training'
     | '/player/workouts'
@@ -582,6 +640,8 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/dashboard/players/$playerId'
     | '/dashboard/players/create'
+    | '/dashboard/tactical/$tacticalId'
+    | '/dashboard/tactical/create'
     | '/dashboard/team-lineup/create'
     | '/dashboard/tournaments/$tournamentId'
     | '/dashboard/tournaments/create'
@@ -589,7 +649,9 @@ export interface FileRouteTypes {
     | '/dashboard/training/create'
     | '/dashboard/workouts/$workoutId'
     | '/dashboard/workouts/create'
+    | '/player/tactics/$tacticalId'
     | '/dashboard/players/$playerId/edit'
+    | '/dashboard/tactical/$tacticalId/edit'
     | '/dashboard/tournaments/$tournamentId/edit'
     | '/dashboard/training/$trainingId/edit'
     | '/dashboard/workouts/$workoutId/edit'
@@ -619,6 +681,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/submissions'
+    | '/dashboard/tactical'
     | '/dashboard/team-lineup'
     | '/dashboard/tournaments'
     | '/dashboard/training'
@@ -632,6 +695,7 @@ export interface FileRouteTypes {
     | '/player/settings'
     | '/player/stats'
     | '/player/submissions'
+    | '/player/tactics'
     | '/player/tournaments'
     | '/player/training'
     | '/player/workouts'
@@ -639,6 +703,8 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/dashboard/players/$playerId'
     | '/dashboard/players/create'
+    | '/dashboard/tactical/$tacticalId'
+    | '/dashboard/tactical/create'
     | '/dashboard/team-lineup/create'
     | '/dashboard/tournaments/$tournamentId'
     | '/dashboard/tournaments/create'
@@ -646,7 +712,9 @@ export interface FileRouteTypes {
     | '/dashboard/training/create'
     | '/dashboard/workouts/$workoutId'
     | '/dashboard/workouts/create'
+    | '/player/tactics/$tacticalId'
     | '/dashboard/players/$playerId/edit'
+    | '/dashboard/tactical/$tacticalId/edit'
     | '/dashboard/tournaments/$tournamentId/edit'
     | '/dashboard/training/$trainingId/edit'
     | '/dashboard/workouts/$workoutId/edit'
@@ -677,6 +745,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/submissions'
+    | '/dashboard/tactical'
     | '/dashboard/team-lineup'
     | '/dashboard/tournaments'
     | '/dashboard/training'
@@ -690,6 +759,7 @@ export interface FileRouteTypes {
     | '/player/settings'
     | '/player/stats'
     | '/player/submissions'
+    | '/player/tactics'
     | '/player/tournaments'
     | '/player/training'
     | '/player/workouts'
@@ -697,6 +767,8 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/dashboard/players/$playerId'
     | '/dashboard/players/create'
+    | '/dashboard/tactical/$tacticalId'
+    | '/dashboard/tactical/create'
     | '/dashboard/team-lineup/create'
     | '/dashboard/tournaments/$tournamentId'
     | '/dashboard/tournaments/create'
@@ -704,7 +776,9 @@ export interface FileRouteTypes {
     | '/dashboard/training/create'
     | '/dashboard/workouts/$workoutId'
     | '/dashboard/workouts/create'
+    | '/player/tactics/$tacticalId'
     | '/dashboard/players/$playerId/edit'
+    | '/dashboard/tactical/$tacticalId/edit'
     | '/dashboard/tournaments/$tournamentId/edit'
     | '/dashboard/training/$trainingId/edit'
     | '/dashboard/workouts/$workoutId/edit'
@@ -842,6 +916,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayerTournamentsRouteImport
       parentRoute: typeof PlayerRoute
     }
+    '/player/tactics': {
+      id: '/player/tactics'
+      path: '/tactics'
+      fullPath: '/player/tactics'
+      preLoaderRoute: typeof PlayerTacticsRouteImport
+      parentRoute: typeof PlayerRoute
+    }
     '/player/submissions': {
       id: '/player/submissions'
       path: '/submissions'
@@ -931,6 +1012,13 @@ declare module '@tanstack/react-router' {
       path: '/team-lineup'
       fullPath: '/dashboard/team-lineup'
       preLoaderRoute: typeof DashboardTeamLineupRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/tactical': {
+      id: '/dashboard/tactical'
+      path: '/tactical'
+      fullPath: '/dashboard/tactical'
+      preLoaderRoute: typeof DashboardTacticalRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/submissions': {
@@ -1024,6 +1112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/player/tactics/$tacticalId': {
+      id: '/player/tactics/$tacticalId'
+      path: '/$tacticalId'
+      fullPath: '/player/tactics/$tacticalId'
+      preLoaderRoute: typeof PlayerTacticsTacticalIdRouteImport
+      parentRoute: typeof PlayerTacticsRoute
+    }
     '/dashboard/workouts/create': {
       id: '/dashboard/workouts/create'
       path: '/create'
@@ -1073,6 +1168,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTeamLineupCreateRouteImport
       parentRoute: typeof DashboardTeamLineupRoute
     }
+    '/dashboard/tactical/create': {
+      id: '/dashboard/tactical/create'
+      path: '/create'
+      fullPath: '/dashboard/tactical/create'
+      preLoaderRoute: typeof DashboardTacticalCreateRouteImport
+      parentRoute: typeof DashboardTacticalRoute
+    }
+    '/dashboard/tactical/$tacticalId': {
+      id: '/dashboard/tactical/$tacticalId'
+      path: '/$tacticalId'
+      fullPath: '/dashboard/tactical/$tacticalId'
+      preLoaderRoute: typeof DashboardTacticalTacticalIdRouteImport
+      parentRoute: typeof DashboardTacticalRoute
+    }
     '/dashboard/players/create': {
       id: '/dashboard/players/create'
       path: '/create'
@@ -1115,6 +1224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTournamentsTournamentIdEditRouteImport
       parentRoute: typeof DashboardTournamentsTournamentIdRoute
     }
+    '/dashboard/tactical/$tacticalId/edit': {
+      id: '/dashboard/tactical/$tacticalId/edit'
+      path: '/edit'
+      fullPath: '/dashboard/tactical/$tacticalId/edit'
+      preLoaderRoute: typeof DashboardTacticalTacticalIdEditRouteImport
+      parentRoute: typeof DashboardTacticalTacticalIdRoute
+    }
     '/dashboard/players/$playerId/edit': {
       id: '/dashboard/players/$playerId/edit'
       path: '/edit'
@@ -1151,6 +1267,34 @@ const DashboardPlayersRouteChildren: DashboardPlayersRouteChildren = {
 
 const DashboardPlayersRouteWithChildren =
   DashboardPlayersRoute._addFileChildren(DashboardPlayersRouteChildren)
+
+interface DashboardTacticalTacticalIdRouteChildren {
+  DashboardTacticalTacticalIdEditRoute: typeof DashboardTacticalTacticalIdEditRoute
+}
+
+const DashboardTacticalTacticalIdRouteChildren: DashboardTacticalTacticalIdRouteChildren =
+  {
+    DashboardTacticalTacticalIdEditRoute: DashboardTacticalTacticalIdEditRoute,
+  }
+
+const DashboardTacticalTacticalIdRouteWithChildren =
+  DashboardTacticalTacticalIdRoute._addFileChildren(
+    DashboardTacticalTacticalIdRouteChildren,
+  )
+
+interface DashboardTacticalRouteChildren {
+  DashboardTacticalTacticalIdRoute: typeof DashboardTacticalTacticalIdRouteWithChildren
+  DashboardTacticalCreateRoute: typeof DashboardTacticalCreateRoute
+}
+
+const DashboardTacticalRouteChildren: DashboardTacticalRouteChildren = {
+  DashboardTacticalTacticalIdRoute:
+    DashboardTacticalTacticalIdRouteWithChildren,
+  DashboardTacticalCreateRoute: DashboardTacticalCreateRoute,
+}
+
+const DashboardTacticalRouteWithChildren =
+  DashboardTacticalRoute._addFileChildren(DashboardTacticalRouteChildren)
 
 interface DashboardTeamLineupRouteChildren {
   DashboardTeamLineupCreateRoute: typeof DashboardTeamLineupCreateRoute
@@ -1259,6 +1403,7 @@ interface DashboardRouteChildren {
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStatsRoute: typeof DashboardStatsRoute
   DashboardSubmissionsRoute: typeof DashboardSubmissionsRoute
+  DashboardTacticalRoute: typeof DashboardTacticalRouteWithChildren
   DashboardTeamLineupRoute: typeof DashboardTeamLineupRouteWithChildren
   DashboardTournamentsRoute: typeof DashboardTournamentsRouteWithChildren
   DashboardTrainingRoute: typeof DashboardTrainingRouteWithChildren
@@ -1278,6 +1423,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStatsRoute: DashboardStatsRoute,
   DashboardSubmissionsRoute: DashboardSubmissionsRoute,
+  DashboardTacticalRoute: DashboardTacticalRouteWithChildren,
   DashboardTeamLineupRoute: DashboardTeamLineupRouteWithChildren,
   DashboardTournamentsRoute: DashboardTournamentsRouteWithChildren,
   DashboardTrainingRoute: DashboardTrainingRouteWithChildren,
@@ -1287,6 +1433,18 @@ const DashboardRouteChildren: DashboardRouteChildren = {
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
+)
+
+interface PlayerTacticsRouteChildren {
+  PlayerTacticsTacticalIdRoute: typeof PlayerTacticsTacticalIdRoute
+}
+
+const PlayerTacticsRouteChildren: PlayerTacticsRouteChildren = {
+  PlayerTacticsTacticalIdRoute: PlayerTacticsTacticalIdRoute,
+}
+
+const PlayerTacticsRouteWithChildren = PlayerTacticsRoute._addFileChildren(
+  PlayerTacticsRouteChildren,
 )
 
 interface PlayerRouteChildren {
@@ -1299,6 +1457,7 @@ interface PlayerRouteChildren {
   PlayerSettingsRoute: typeof PlayerSettingsRoute
   PlayerStatsRoute: typeof PlayerStatsRoute
   PlayerSubmissionsRoute: typeof PlayerSubmissionsRoute
+  PlayerTacticsRoute: typeof PlayerTacticsRouteWithChildren
   PlayerTournamentsRoute: typeof PlayerTournamentsRoute
   PlayerTrainingRoute: typeof PlayerTrainingRoute
   PlayerWorkoutsRoute: typeof PlayerWorkoutsRoute
@@ -1314,6 +1473,7 @@ const PlayerRouteChildren: PlayerRouteChildren = {
   PlayerSettingsRoute: PlayerSettingsRoute,
   PlayerStatsRoute: PlayerStatsRoute,
   PlayerSubmissionsRoute: PlayerSubmissionsRoute,
+  PlayerTacticsRoute: PlayerTacticsRouteWithChildren,
   PlayerTournamentsRoute: PlayerTournamentsRoute,
   PlayerTrainingRoute: PlayerTrainingRoute,
   PlayerWorkoutsRoute: PlayerWorkoutsRoute,

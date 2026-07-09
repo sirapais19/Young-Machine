@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, CalendarDays, Dumbbell, BarChart3, User, Bell } from "lucide-react";
+import { Home, CalendarDays, Dumbbell, BarChart3, User, Bell, Crosshair } from "lucide-react";
 import { YMLogo } from "@/components/ym/Logo";
 import { PlayerAvatar } from "@/components/ym/Avatar";
 import { useAppData } from "@/hooks/useAppData";
@@ -11,6 +11,7 @@ const tabs = [
   { to: "/player/dashboard", label: "Home", icon: Home },
   { to: "/player/training", label: "Training", icon: CalendarDays },
   { to: "/player/workouts", label: "Workout", icon: Dumbbell },
+  { to: "/player/tactics", label: "Tactics", icon: Crosshair },
   { to: "/player/stats", label: "Stats", icon: BarChart3 },
   { to: "/player/profile", label: "Profile", icon: User },
 ] as const;
@@ -52,7 +53,7 @@ export function PlayerLayout({ title, children }: { title?: string; children: Re
       <main className="mx-auto max-w-4xl px-4 py-5 pb-28">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#030303]/94 pb-safe backdrop-blur-xl">
-        <div className="mx-auto grid max-w-4xl grid-cols-5 px-2">
+        <div className="mx-auto grid max-w-4xl grid-cols-6 px-2">
           {tabs.map((t) => {
             const active = path === t.to || path.startsWith(t.to + "/");
             const Icon = t.icon;
