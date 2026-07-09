@@ -7,7 +7,7 @@ const tones: Record<Tone, string> = {
   green: "bg-success/10 text-success border-success/30",
   amber: "bg-warning/10 text-warning border-warning/30",
   red: "bg-destructive/10 text-destructive border-destructive/30",
-  silver: "bg-white/[0.045] text-silver border-white/10",
+  silver: "bg-white/[0.055] text-silver border-white/15",
 };
 
 export function StatusBadge({
@@ -22,7 +22,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-[11px] font-semibold leading-none",
+        "inline-flex items-center gap-2 rounded-md border px-2.5 py-1 font-mono text-[10px] font-black uppercase leading-none tracking-[0.08em]",
         tones[tone],
         className,
       )}

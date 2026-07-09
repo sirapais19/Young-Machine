@@ -237,5 +237,6 @@ export interface GalleryImageRow {
 }
 
 export interface PlayerWithProfileRow extends PlayerRow {
+  profile?: ProfileRow | null;
   profiles?: ProfileRow | null;
 }

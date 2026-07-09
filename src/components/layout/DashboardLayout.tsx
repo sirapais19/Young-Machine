@@ -84,18 +84,18 @@ export function DashboardLayout({ title, children }: { title?: string; children:
           className="flex items-center justify-between gap-3"
         >
           <YMLogo showWordmark />
-          <span className="rounded-lg border border-cyan/25 bg-cyan/10 px-2 py-1 text-[10px] font-semibold text-cyan">
-            PRO
+          <span className="machine-badge">
+            COMMAND
           </span>
         </Link>
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-3">
-          <div className="text-[10px] font-semibold text-silver-muted">MATCH WEEK READINESS</div>
+        <div className="machine-card mt-4 p-3">
+          <div className="machine-section-label">Readiness</div>
           <div className="mt-2 flex items-end justify-between">
-            <span className="metric-nums text-2xl font-bold text-cyan">87%</span>
+            <span className="metric-nums text-2xl font-black text-silver">87%</span>
             <span className="text-[11px] text-silver-muted">KL Open block</span>
           </div>
           <div className="mt-3 h-1.5 rounded-full bg-white/10">
-            <div className="h-full w-[87%] rounded-full bg-cyan shadow-[0_0_18px_color-mix(in_oklab,var(--cyan)_70%,transparent)]" />
+            <div className="h-full w-[87%] rounded-full bg-gradient-to-r from-silver-muted via-silver to-cyan" />
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function DashboardLayout({ title, children }: { title?: string; children:
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {groups.map((g) => (
           <div key={g.label}>
-            <div className="px-3 pb-2 text-[10px] font-semibold text-silver-muted/80">
+            <div className="px-3 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.14em] text-silver-muted/80">
               {g.label}
             </div>
             <ul className="space-y-1">
@@ -120,16 +120,16 @@ export function DashboardLayout({ title, children }: { title?: string; children:
                       to={item.to}
                       onClick={() => setOpen(false)}
                       className={cn(
-                        "group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium",
+                        "group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-bold",
                         active
-                          ? "border-cyan/35 bg-cyan/10 text-cyan shadow-inner"
-                          : "border-transparent text-silver hover:border-white/10 hover:bg-white/[0.045] hover:text-foreground",
+                          ? "border-white/15 bg-white/[0.065] text-foreground shadow-inner"
+                          : "border-transparent text-silver-muted hover:border-white/10 hover:bg-white/[0.045] hover:text-foreground",
                       )}
                     >
                       <span
                         className={cn(
                           "grid h-8 w-8 shrink-0 place-items-center rounded-lg border",
-                          active ? "border-cyan/30 bg-cyan/10" : "border-white/10 bg-white/[0.03]",
+                          active ? "border-cyan/30 bg-cyan/10 text-cyan" : "border-white/10 bg-white/[0.03]",
                         )}
                       >
                         <Icon
@@ -150,7 +150,7 @@ export function DashboardLayout({ title, children }: { title?: string; children:
       </nav>
 
       <div className="border-t border-white/10 p-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+        <div className="machine-card p-3">
           <div className="flex items-center gap-3">
             <PlayerAvatar name={currentUser?.name ?? "Capang"} hue={200} size={38} />
             <div className="min-w-0">
@@ -163,7 +163,7 @@ export function DashboardLayout({ title, children }: { title?: string; children:
               logout();
               navigate({ to: "/login" });
             }}
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.035] py-2 text-xs font-semibold text-silver hover:border-destructive/40 hover:text-destructive"
+            className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.035] py-2 text-xs font-bold text-silver hover:border-destructive/40 hover:text-destructive"
           >
             Sign out
           </button>
@@ -173,8 +173,8 @@ export function DashboardLayout({ title, children }: { title?: string; children:
   );
 
   return (
-    <div className="grid-bg min-h-[100dvh] text-foreground">
-      <aside className="fixed inset-y-4 left-4 z-30 hidden w-[17.5rem] overflow-hidden rounded-[1.75rem] border border-white/10 bg-sidebar/92 shadow-[0_24px_90px_-58px_color-mix(in_oklab,var(--cyan)_55%,black)] lg:flex">
+    <div className="machine-grid-bg min-h-[100dvh] text-foreground">
+      <aside className="fixed inset-y-4 left-4 z-30 hidden w-[17.5rem] overflow-hidden rounded-[1.25rem] border border-white/10 bg-sidebar/95 shadow-[0_24px_90px_-62px_black] lg:flex">
         {SidebarBody}
       </aside>
 
@@ -185,7 +185,7 @@ export function DashboardLayout({ title, children }: { title?: string; children:
             onClick={() => setOpen(false)}
             aria-label="Close menu"
           />
-          <aside className="absolute inset-y-3 left-3 w-[min(21rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.5rem] border border-white/10 bg-sidebar shadow-2xl">
+          <aside className="absolute inset-y-3 left-3 w-[min(21rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.25rem] border border-white/10 bg-sidebar shadow-2xl">
             <button
               className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/5 text-silver"
               onClick={() => setOpen(false)}
@@ -199,24 +199,24 @@ export function DashboardLayout({ title, children }: { title?: string; children:
       )}
 
       <div className="lg:pl-[19.5rem]">
-        <header className="sticky top-0 z-20 border-b border-white/10 bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-20 border-b border-white/10 bg-[#030303]/82 backdrop-blur-xl">
           <div className="ym-container flex min-h-20 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <button
-                className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.045] lg:hidden"
+                className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.045] lg:hidden"
                 onClick={() => setOpen(true)}
                 aria-label="Open menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-cyan">Young Machine HQ</div>
+                <div className="machine-section-label">Machine command center</div>
                 <h1 className="truncate text-xl font-black sm:text-2xl">{title ?? "Dashboard"}</h1>
               </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <label className="hidden w-72 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2.5 md:flex">
+              <label className="machine-input hidden w-72 items-center gap-2 px-3 py-2.5 md:flex">
                 <Search className="h-4 w-4 text-silver-muted" />
                 <input
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-silver-muted"
@@ -225,13 +225,13 @@ export function DashboardLayout({ title, children }: { title?: string; children:
               </label>
               <Link
                 to="/dashboard/training/create"
-                className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground glow-cyan sm:inline-flex"
+                className="hidden items-center gap-2 rounded-xl border border-cyan/30 bg-cyan/10 px-4 py-2.5 text-sm font-black text-cyan sm:inline-flex"
               >
                 <Plus className="h-4 w-4" />
                 <span>New session</span>
               </Link>
               <button
-                className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.045]"
+                className="relative grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.045]"
                 aria-label="Notifications"
               >
                 <Bell className="h-4 w-4" />
@@ -248,7 +248,7 @@ export function DashboardLayout({ title, children }: { title?: string; children:
 
         <Link
           to="/dashboard/training/create"
-          className="fixed bottom-5 right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground glow-cyan lg:hidden"
+          className="fixed bottom-5 right-5 z-30 grid h-14 w-14 place-items-center rounded-xl border border-cyan/30 bg-cyan/15 text-cyan glow-cyan lg:hidden"
           aria-label="Create new item"
         >
           <Plus className="h-6 w-6" />

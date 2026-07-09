@@ -10,19 +10,20 @@ export function YMLogo({ className, size = 36, showWordmark = false }: LogoProps
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <div
-        className="relative grid place-items-center rounded-lg glow-cyan"
+        className="relative grid place-items-center rounded-lg machine-glow"
         style={{
           width: size,
           height: size,
-          background: "linear-gradient(135deg, #0a0a0a, #1a1a1a)",
-          border: "1px solid color-mix(in oklab, var(--cyan) 45%, transparent)",
+          background: "linear-gradient(135deg, #202124, #080808 58%, #151517)",
+          border: "1px solid rgba(255,255,255,0.18)",
         }}
       >
         <svg viewBox="0 0 32 32" width={size * 0.7} height={size * 0.7} fill="none">
           <defs>
             <linearGradient id="ym-stroke" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#7EE8FA" />
-              <stop offset="1" stopColor="#00BFFF" />
+              <stop offset="0" stopColor="#F2F2F2" />
+              <stop offset="0.55" stopColor="#C0C0C0" />
+              <stop offset="1" stopColor="#38DDF8" />
             </linearGradient>
           </defs>
           <path
@@ -44,8 +45,8 @@ export function YMLogo({ className, size = 36, showWordmark = false }: LogoProps
       </div>
       {showWordmark && (
         <div className="flex flex-col leading-none">
-          <span className="text-sm font-bold tracking-[0.2em] text-foreground">YOUNG MACHINE</span>
-          <span className="text-[10px] tracking-[0.35em] text-cyan">ULTIMATE · YM</span>
+          <span className="text-sm font-black tracking-[0.22em] text-foreground">YOUNG MACHINE</span>
+          <span className="text-[10px] tracking-[0.35em] text-silver-muted">COMMAND SYSTEM</span>
         </div>
       )}
     </div>

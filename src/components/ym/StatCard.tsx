@@ -29,7 +29,7 @@ export function StatCard({
       <div className="panel-core panel-hover h-full p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-silver-muted">{label}</div>
+            <div className="font-mono text-[10px] font-black uppercase tracking-[0.12em] text-silver-muted">{label}</div>
             <div className="metric-nums mt-2 text-3xl font-black leading-none text-foreground sm:text-4xl">
               {value}
             </div>

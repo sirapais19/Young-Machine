@@ -162,6 +162,7 @@ function PlayerFormPage({ mode, playerId }: { mode: "create" | "edit"; playerId?
   const { data, addPlayer, updatePlayer } = useAppData();
   const navigate = useNavigate();
   const existing = data.players.find((player) => player.id === playerId);
+  const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
     name: existing?.name ?? "",
     email: existing?.email ?? "",
@@ -179,8 +180,9 @@ function PlayerFormPage({ mode, playerId }: { mode: "create" | "edit"; playerId?
     profileImage: existing?.profileImage ?? "",
   });
 
-  const save = (e: React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     const payload = {
       name: form.name,
       email: form.email,
@@ -197,14 +199,21 @@ function PlayerFormPage({ mode, playerId }: { mode: "create" | "edit"; playerId?
       injury: form.injury === "None" ? null : (form.injury as RecoveryStatus),
       profileImage: form.profileImage,
     };
-    if (mode === "create") {
-      addPlayer(payload);
-      toast.success(`${form.name} added to the roster.`);
-      navigate({ to: "/dashboard/players" });
-    } else if (playerId) {
-      updatePlayer({ ...payload, id: playerId });
-      toast.success(`${form.name} updated.`);
-      navigate({ to: "/dashboard/players/$playerId", params: { playerId } });
+
+    try {
+      if (mode === "create") {
+        await addPlayer(payload);
+        toast.success(`${form.name} added. Default password: Player1234`);
+        navigate({ to: "/dashboard/players" });
+      } else if (playerId) {
+        updatePlayer({ ...payload, id: playerId });
+        toast.success(`${form.name} updated.`);
+        navigate({ to: "/dashboard/players/$playerId", params: { playerId } });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to create player account.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -249,10 +258,18 @@ function PlayerFormPage({ mode, playerId }: { mode: "create" | "edit"; playerId?
         <Field label="Bio">
           <textarea className="min-h-28 w-full rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm outline-none" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
         </Field>
+        {mode === "create" && (
+          <div className="rounded-2xl border border-cyan/20 bg-cyan/10 p-4 text-sm text-silver sm:col-span-2">
+            <div className="font-black text-cyan">Default player login</div>
+            <div className="mt-1 text-silver-muted">A Supabase player account will be created with this email and password <span className="font-mono font-black text-silver">Player1234</span>.</div>
+            <div className="mt-2 text-xs text-silver-muted">Use a real deliverable email. Supabase Auth can reject fake or blocked addresses before the account is created.</div>
+          </div>
+        )}
         <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-bold">
           <input type="checkbox" checked={form.isPublic} onChange={(e) => setForm({ ...form, isPublic: e.target.checked })} />
           Public player profile
         </label>
+        {isSaving && <div className="text-sm font-bold text-cyan sm:col-span-2">Creating player account...</div>}
       </FormShell>
     </DashboardLayout>
   );
@@ -333,19 +350,24 @@ export function TrainingListPage() {
         {data.trainingSessions.map((training) => {
           const records = data.attendanceRecords.filter((record) => record.trainingId === training.id);
           return (
-            <Link key={training.id} to="/dashboard/training/$trainingId" params={{ trainingId: training.id }} className="panel panel-hover block p-5">
+            <Link key={training.id} to="/dashboard/training/$trainingId" params={{ trainingId: training.id }} className="panel panel-hover group block p-5">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <div className="text-xl font-black">{training.title}</div>
-                  <div className="mt-2 text-xs text-silver-muted">{training.date} | {training.start} to {training.end} | {training.location}</div>
+                  <div className="mt-3 grid gap-2 text-xs text-silver-muted sm:grid-cols-3">
+                    <PlayerInfoLine icon={CalendarDays} text={training.date} />
+                    <PlayerInfoLine icon={Clock} text={`${training.start} - ${training.end}`} />
+                    <PlayerInfoLine icon={MapPin} text={training.location} />
+                  </div>
                 </div>
                 <StatusBadge tone={training.status === "Upcoming" ? "cyan" : training.status === "Completed" ? "green" : "red"}>{training.status}</StatusBadge>
               </div>
-              <div className="mt-4 grid grid-cols-5 gap-2 text-center">
+              <div className="mt-5 grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
                 {["Going", "Maybe", "Out", "Attended", "Absent"].map((status) => (
                   <MiniCount key={status} label={status} value={records.filter((record) => record.response === status || record.coachStatus === status).length} />
                 ))}
               </div>
+              <div className="mt-4 text-xs font-bold text-cyan opacity-80 transition group-hover:opacity-100">Open attendance roster</div>
             </Link>
           );
         })}
@@ -428,19 +450,39 @@ export function TrainingDetailPage({ trainingId }: { trainingId: string }) {
         </div>
       </div>
       <div className="mt-5 panel p-5">
-        <div className="mb-4 text-xl font-black">Attendance</div>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-xl font-black">Attendance roster</div>
+            <p className="mt-1 text-sm text-silver-muted">Review each player response and set the final coach mark.</p>
+          </div>
+          <div className="text-xs font-semibold text-silver-muted">{records.length} players</div>
+        </div>
+        <div className="grid gap-3 xl:grid-cols-2">
           {records.map(({ player, record }) => (
-            <div key={player.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-              <div className="flex items-center gap-3">
-                <PlayerAvatar name={player.name} hue={player.avatarHue} size={40} />
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold">{player.name}</div>
-                  <div className="text-xs text-silver-muted">Response: {record?.response ?? "No response"}</div>
+            <article key={player.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <div className="flex items-start gap-3">
+                <PlayerAvatar name={player.name} hue={player.avatarHue} size={46} />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="truncate text-base font-black">{player.name}</div>
+                      <div className="mt-1 text-xs text-silver-muted">#{player.jersey} | {player.position}</div>
+                    </div>
+                    <AttendanceStatusPill status={record?.response ?? "No response"} />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_13rem] sm:items-end">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-silver-muted">Coach mark</div>
+                      <div className="mt-1 text-sm font-bold text-silver">{record?.coachStatus ?? "No response"}</div>
+                    </div>
+                    <label className="grid gap-2 text-xs font-semibold text-silver-muted">
+                      Update status
+                      <Select value={record?.coachStatus ?? "No response"} onChange={(value) => updateAttendanceByCoach(training.id, player.id, value as AttendanceStatus)} options={attendanceStatuses} />
+                    </label>
+                  </div>
                 </div>
-                <Select value={record?.coachStatus ?? "No response"} onChange={(value) => updateAttendanceByCoach(training.id, player.id, value as AttendanceStatus)} options={attendanceStatuses} />
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </div>
@@ -493,16 +535,24 @@ export function AttendanceManagerPage() {
           const player = data.players.find((item) => item.id === record.playerId);
           if (!player) return null;
           return (
-            <div key={record.id} className="panel p-4">
-              <div className="flex items-center gap-3">
+            <article key={record.id} className="panel p-4">
+              <div className="flex items-start gap-3">
                 <PlayerAvatar name={player.name} hue={player.avatarHue} size={42} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold">{player.name}</div>
-                  <div className="text-xs text-silver-muted">Player response: {record.response}</div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="truncate font-black">{player.name}</div>
+                      <div className="mt-1 text-xs text-silver-muted">#{player.jersey} | {player.position}</div>
+                    </div>
+                    <AttendanceStatusPill status={record.response} />
+                  </div>
+                  <label className="mt-3 grid gap-2 text-xs font-semibold text-silver-muted">
+                    Coach mark
+                    <Select value={record.coachStatus ?? "No response"} onChange={(value) => updateAttendanceByCoach(record.trainingId, record.playerId, value as AttendanceStatus)} options={attendanceStatuses} />
+                  </label>
                 </div>
-                <Select value={record.coachStatus ?? "No response"} onChange={(value) => updateAttendanceByCoach(record.trainingId, record.playerId, value as AttendanceStatus)} options={attendanceStatuses} />
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
@@ -562,7 +612,9 @@ export function WorkoutCreatePage() {
         <TextField label="Start date" type="date" value={plan.start} onChange={(value) => setPlan({ ...plan, start: value })} required />
         <TextField label="End date" type="date" value={plan.end} onChange={(value) => setPlan({ ...plan, end: value })} required />
         <Field label="Status"><Select value={plan.status} onChange={(value) => setPlan({ ...plan, status: value as typeof plan.status })} options={["Draft", "Active", "Completed"]} /></Field>
-        <Field label="Task date"><input className={inputClass} type="date" value={task.date} onChange={(e) => setTask({ ...task, date: e.target.value })} /></Field>
+        <Field label="Task date">
+          <TemporalInput type="date" value={task.date} onChange={(value) => setTask({ ...task, date: value })} />
+        </Field>
         <TextField label="Day name" value={task.day} onChange={(value) => setTask({ ...task, day: value })} />
         <TextField label="Task title" value={task.title} onChange={(value) => setTask({ ...task, title: value })} />
         <TextField label="Task description" value={task.description} onChange={(value) => setTask({ ...task, description: value })} />
@@ -809,38 +861,46 @@ export function TournamentDetailPage({ tournamentId }: { tournamentId: string })
           </div>
         }
       />
-      <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="panel p-5">
-          <div className="mb-4 text-xl font-black">Selected players</div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-xl font-black">Tournament roster</div>
+              <p className="mt-1 text-sm leading-6 text-silver-muted">Select players, set match roles, and keep the roster readable before building a lineup.</p>
+            </div>
+            <StatusBadge tone="cyan">{selected.length} selected</StatusBadge>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
             {data.players.map((player) => {
               const row = selected.find((item) => item.playerId === player.id);
               return (
-                <div key={player.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-                  <div className="flex items-center gap-3">
-                    <PlayerAvatar name={player.name} hue={player.avatarHue} size={38} />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold">{player.name}</div>
-                      <div className="text-xs text-silver-muted">{row?.role ?? "not selected"}</div>
-                    </div>
-                    {row ? (
-                      <>
-                        <Select value={row.role} onChange={(value) => updateTournamentPlayerRole(tournament.id, player.id, value as TournamentRole)} options={["main player", "reserve", "captain"]} />
-                        <button onClick={() => removeTournamentPlayer(tournament.id, player.id)} className="grid h-10 w-10 place-items-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive" aria-label={`Remove ${player.name}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={() => selectTournamentPlayer(tournament.id, player.id, "reserve")} className="rounded-xl border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs font-bold text-cyan">Add</button>
-                    )}
-                  </div>
-                </div>
+                <TournamentPlayerSelectionCard
+                  key={player.id}
+                  player={player}
+                  role={row?.role}
+                  onAdd={() => selectTournamentPlayer(tournament.id, player.id, "reserve")}
+                  onRemove={() => removeTournamentPlayer(tournament.id, player.id)}
+                  onRoleChange={(role) => updateTournamentPlayerRole(tournament.id, player.id, role)}
+                />
               );
             })}
           </div>
         </div>
         <div className="panel p-5">
-          <div className="mb-4 text-xl font-black">Stats table</div>
+          <div className="mb-5">
+            <div className="text-xl font-black">Stats table</div>
+            <p className="mt-1 text-sm leading-6 text-silver-muted">Each player card uses the same stat order so coaches know exactly what to fill in after a match.</p>
+          </div>
+          <div className="mb-4 grid gap-2 rounded-2xl border border-cyan/20 bg-cyan/10 p-3 text-xs text-silver">
+            <div className="font-black text-cyan">Field guide</div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+              <StatGuideItem label="Score" detail="Goals caught by the player." />
+              <StatGuideItem label="Assist" detail="Throws that directly lead to a score." />
+              <StatGuideItem label="Blocks" detail="Defensive stops, hand blocks, or layout blocks." />
+              <StatGuideItem label="Turnovers" detail="Possessions lost by throw, drop, or decision." />
+              <StatGuideItem label="Games played" detail="Number of games included in this entry." />
+            </div>
+          </div>
           <div className="space-y-3">
             {selected.map((row) => {
               const player = data.players.find((item) => item.id === row.playerId);
@@ -849,6 +909,8 @@ export function TournamentDetailPage({ tournamentId }: { tournamentId: string })
                 <TournamentStatsEditor
                   key={row.id}
                   playerName={player.name}
+                  playerRole={row.role}
+                  playerJersey={player.jersey}
                   stats={stats}
                   tournamentId={tournament.id}
                   playerId={row.playerId}
@@ -857,6 +919,9 @@ export function TournamentDetailPage({ tournamentId }: { tournamentId: string })
                 />
               ) : null;
             })}
+            {selected.length === 0 && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm text-silver-muted">Select players from the roster first. Their stat forms will appear here.</div>
+            )}
           </div>
           <Link to="/dashboard/team-lineup/create" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground glow-cyan">
             <Users2 className="h-4 w-4" />
@@ -1408,10 +1473,10 @@ function ChartPanel({ title, data }: { title: string; data: { name: string; valu
 
 function PageHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) {
   return (
-    <section className="panel mb-5 p-5 sm:p-6">
+    <section className="machine-panel mb-5 p-5 sm:p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="mb-3 inline-flex rounded-lg border border-cyan/25 bg-cyan/10 px-3 py-1 text-[11px] font-semibold text-cyan">{eyebrow}</div>
+          <div className="machine-section-label mb-3">{eyebrow}</div>
           <h2 className="text-3xl font-black sm:text-4xl">{title}</h2>
           <p className="mt-3 max-w-[62ch] text-sm leading-6 text-silver-muted">{description}</p>
         </div>
@@ -1435,17 +1500,17 @@ function FormShell({
   cancelParams?: Record<string, string>;
 }) {
   return (
-    <form onSubmit={onSubmit} className="panel mx-auto grid max-w-4xl gap-4 p-5 sm:grid-cols-2 sm:p-6">
+    <form onSubmit={onSubmit} className="machine-panel mx-auto grid max-w-4xl gap-4 p-5 sm:grid-cols-2 sm:p-6">
       <div className="sm:col-span-2">
         <h2 className="text-3xl font-black">{title}</h2>
       </div>
       {children}
       <div className="flex gap-3 sm:col-span-2">
-        <button className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-cyan">
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan/30 bg-cyan/10 px-5 py-3 text-sm font-black text-cyan glow-cyan">
           <Save className="h-4 w-4" />
           Save
         </button>
-        <Link to={cancelTo} params={cancelParams} className="rounded-full border border-white/10 bg-white/[0.045] px-5 py-3 text-sm font-bold">Cancel</Link>
+        <Link to={cancelTo} params={cancelParams} className="rounded-xl border border-white/10 bg-white/[0.045] px-5 py-3 text-sm font-bold">Cancel</Link>
       </div>
     </form>
   );
@@ -1460,13 +1525,45 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputClass = "w-full rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm text-foreground outline-none placeholder:text-silver-muted";
+const inputClass = "machine-input w-full px-3 py-3 text-sm outline-none placeholder:text-silver-muted focus:border-cyan/35";
 
 function TextField({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
+  if (type === "date" || type === "time") {
+    return (
+      <Field label={label}>
+        <TemporalInput type={type} value={value} onChange={onChange} required={required} />
+      </Field>
+    );
+  }
+
   return (
     <Field label={label}>
       <input className={inputClass} type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} />
     </Field>
+  );
+}
+
+function TemporalInput({ type, value, onChange, required = false }: { type: "date" | "time"; value: string; onChange: (value: string) => void; required?: boolean }) {
+  const Icon = type === "date" ? CalendarDays : Clock;
+  const code = type === "date" ? "DATE" : "TIME";
+
+  return (
+    <div className="group relative">
+      <div className="pointer-events-none absolute left-3 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg border border-white/10 bg-white/[0.055] text-cyan transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-focus-within:border-cyan/35 group-focus-within:bg-cyan/10">
+        <Icon className="h-4 w-4" />
+      </div>
+      <input
+        className={`${inputClass} machine-date-input metric-nums h-14 pl-14 pr-20 font-black uppercase tracking-[0.04em]`}
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+      />
+      <span className="pointer-events-none absolute right-11 top-1/2 -translate-y-1/2 rounded-md border border-white/10 bg-black/30 px-2 py-1 font-mono text-[9px] font-black tracking-[0.16em] text-silver-muted">
+        {code}
+      </span>
+      <span className="pointer-events-none absolute inset-x-4 bottom-1 h-px origin-left scale-x-0 bg-gradient-to-r from-cyan via-silver to-transparent transition duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-focus-within:scale-x-100" />
+    </div>
   );
 }
 
@@ -1484,7 +1581,7 @@ function Select({ value, onChange, options, labels }: { value: string; onChange:
 
 function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
   return (
-    <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3">
+    <label className="machine-input flex items-center gap-2 px-3">
       <Search className="h-4 w-4 text-silver-muted" />
       <input className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-silver-muted" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
     </label>
@@ -1493,7 +1590,7 @@ function SearchInput({ value, onChange, placeholder }: { value: string; onChange
 
 function PrimaryLink({ to, params, label, icon: Icon }: { to: string; params?: Record<string, string>; label: string; icon: typeof Plus }) {
   return (
-    <Link to={to} params={params} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-cyan">
+    <Link to={to} params={params} className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan/30 bg-cyan/10 px-5 py-3 text-sm font-black text-cyan glow-cyan">
       <Icon className="h-4 w-4" />
       {label}
     </Link>
@@ -1528,8 +1625,66 @@ function CheckboxGrid({ label, items, selected, onChange }: { label: string; ite
   );
 }
 
+function TournamentPlayerSelectionCard({
+  player,
+  role,
+  onAdd,
+  onRemove,
+  onRoleChange,
+}: {
+  player: Player;
+  role?: TournamentRole;
+  onAdd: () => void;
+  onRemove: () => void;
+  onRoleChange: (role: TournamentRole) => void;
+}) {
+  const selected = Boolean(role);
+
+  return (
+    <div className={`rounded-2xl border p-4 transition duration-200 ${selected ? "border-cyan/25 bg-cyan/[0.055]" : "border-white/10 bg-white/[0.035]"}`}>
+      <div className="flex items-start gap-3">
+        <PlayerAvatar name={player.name} hue={player.avatarHue} size={44} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="truncate text-base font-black">{player.name}</div>
+            <span className="metric-nums rounded-full border border-white/10 bg-white/[0.045] px-2 py-0.5 text-[11px] font-bold text-silver-muted">#{player.jersey}</span>
+          </div>
+          <div className="mt-1 text-xs text-silver-muted">{player.position}</div>
+        </div>
+        {selected ? (
+          <button onClick={onRemove} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive transition hover:bg-destructive/15" aria-label={`Remove ${player.name}`}>
+            <Trash2 className="h-4 w-4" />
+          </button>
+        ) : (
+          <button onClick={onAdd} className="shrink-0 rounded-xl border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs font-black text-cyan transition hover:bg-cyan/15">Add</button>
+        )}
+      </div>
+      <div className="mt-4">
+        {selected && role ? (
+          <Field label="Tournament role">
+            <Select value={role} onChange={(value) => onRoleChange(value as TournamentRole)} options={["main player", "reserve", "captain"]} />
+          </Field>
+        ) : (
+          <div className="rounded-xl border border-white/10 bg-black/10 px-3 py-2 text-xs text-silver-muted">Not selected for this tournament.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatGuideItem({ label, detail }: { label: string; detail: string }) {
+  return (
+    <div className="grid gap-0.5 rounded-xl border border-white/10 bg-black/10 px-3 py-2">
+      <span className="text-[11px] font-black text-foreground">{label}</span>
+      <span className="leading-5 text-silver-muted">{detail}</span>
+    </div>
+  );
+}
+
 function TournamentStatsEditor({
   playerName,
+  playerRole,
+  playerJersey,
   stats,
   tournamentId,
   playerId,
@@ -1537,6 +1692,8 @@ function TournamentStatsEditor({
   onDelete,
 }: {
   playerName: string;
+  playerRole: TournamentRole;
+  playerJersey: number;
   stats?: TournamentStats;
   tournamentId: string;
   playerId: string;
@@ -1569,22 +1726,42 @@ function TournamentStatsEditor({
         });
         toast.success(`${playerName} stats saved.`);
       }}
-      className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"
+      className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
     >
-      <div className="mb-3 font-bold">{playerName}</div>
-      <div className="grid grid-cols-2 gap-2">
-        <input className={inputClass} type="number" min="0" value={form.score} onChange={(event) => setForm({ ...form, score: event.target.value })} aria-label={`${playerName} score`} />
-        <input className={inputClass} type="number" min="0" value={form.assist} onChange={(event) => setForm({ ...form, assist: event.target.value })} aria-label={`${playerName} assist`} />
-        <input className={inputClass} type="number" min="0" value={form.blocks} onChange={(event) => setForm({ ...form, blocks: event.target.value })} aria-label={`${playerName} blocks`} />
-        <input className={inputClass} type="number" min="0" value={form.turnovers} onChange={(event) => setForm({ ...form, turnovers: event.target.value })} aria-label={`${playerName} turnovers`} />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-lg font-black">{playerName}</div>
+          <div className="mt-1 text-xs text-silver-muted">#{playerJersey} | {playerRole}</div>
+        </div>
+        {stats ? <StatusBadge tone="green">Saved</StatusBadge> : <StatusBadge tone="silver">No stats</StatusBadge>}
       </div>
-      <input className={`${inputClass} mt-2`} type="number" min="1" value={form.gamesPlayed} onChange={(event) => setForm({ ...form, gamesPlayed: event.target.value })} aria-label={`${playerName} games played`} />
-      <input className={`${inputClass} mt-2`} value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="Note" />
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">Save stats</button>
-        {stats && onDelete && <button type="button" onClick={() => onDelete(stats.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs font-bold text-destructive">Delete stats</button>}
+      <div className="grid grid-cols-2 gap-3">
+        <StatNumberField label="Score" value={form.score} onChange={(value) => setForm({ ...form, score: value })} ariaLabel={`${playerName} score`} />
+        <StatNumberField label="Assist" value={form.assist} onChange={(value) => setForm({ ...form, assist: value })} ariaLabel={`${playerName} assist`} />
+        <StatNumberField label="Blocks" value={form.blocks} onChange={(value) => setForm({ ...form, blocks: value })} ariaLabel={`${playerName} blocks`} />
+        <StatNumberField label="Turnovers" value={form.turnovers} onChange={(value) => setForm({ ...form, turnovers: value })} ariaLabel={`${playerName} turnovers`} />
+      </div>
+      <div className="mt-3">
+        <StatNumberField label="Games played" value={form.gamesPlayed} min="1" onChange={(value) => setForm({ ...form, gamesPlayed: value })} ariaLabel={`${playerName} games played`} />
+      </div>
+      <label className="mt-3 grid gap-1.5 text-xs font-bold text-silver-muted">
+        Coach note
+        <input className={inputClass} value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="Example: strong deep cuts, handled final point" />
+      </label>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button className="rounded-full bg-primary px-4 py-2.5 text-xs font-black text-primary-foreground transition hover:brightness-110">Save stats</button>
+        {stats && onDelete && <button type="button" onClick={() => onDelete(stats.id)} className="rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs font-black text-destructive transition hover:bg-destructive/15">Delete stats</button>}
       </div>
     </form>
+  );
+}
+
+function StatNumberField({ label, value, onChange, ariaLabel, min = "0" }: { label: string; value: string; onChange: (value: string) => void; ariaLabel: string; min?: string }) {
+  return (
+    <label className="grid gap-1.5 text-xs font-bold text-silver-muted">
+      {label}
+      <input className={`${inputClass} metric-nums font-bold text-foreground`} type="number" min={min} value={value} onChange={(event) => onChange(event.target.value)} aria-label={ariaLabel} />
+    </label>
   );
 }
 
@@ -1622,6 +1799,23 @@ function PlayerAttendanceButton({
       <Icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
       {status}
     </button>
+  );
+}
+
+function AttendanceStatusPill({ status }: { status: AttendanceStatus }) {
+  const toneClass = {
+    Going: "border-success/30 bg-success/10 text-success",
+    Maybe: "border-warning/30 bg-warning/10 text-warning",
+    Out: "border-destructive/30 bg-destructive/10 text-destructive",
+    Attended: "border-cyan/30 bg-cyan/10 text-cyan",
+    Absent: "border-destructive/30 bg-destructive/10 text-destructive",
+    "No response": "border-white/10 bg-white/[0.045] text-silver-muted",
+  }[status];
+
+  return (
+    <span className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-black ${toneClass}`}>
+      {status}
+    </span>
   );
 }
 

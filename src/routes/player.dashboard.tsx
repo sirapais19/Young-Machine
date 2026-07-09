@@ -33,13 +33,13 @@ function PlayerDashboard() {
     <PlayerLayout title="Home">
       <section className="panel-shell motion-rise">
         <div className="panel-core relative overflow-hidden p-5">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan/20 blur-3xl" />
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan/10 blur-3xl" />
           <div className="relative flex items-center gap-4">
             <PlayerAvatar name={player.name} hue={player.avatarHue} size={62} />
             <div className="min-w-0 flex-1">
-              <div className="metric-nums text-[11px] font-semibold text-cyan">#{player.jersey} | {player.position}</div>
+              <div className="machine-section-label">#{player.jersey} | {player.position}</div>
               <div className="truncate text-2xl font-black">Ready, {player.name}</div>
-              <div className="mt-1 text-xs text-silver-muted">Season 2026 | Local player dashboard</div>
+              <div className="mt-1 text-xs text-silver-muted">Personal machine interface</div>
             </div>
           </div>
           <div className="relative mt-5 grid grid-cols-3 gap-2">
@@ -92,11 +92,11 @@ function PlayerDashboard() {
             </div>
             <div className="mt-2 text-xs text-silver-muted">Week progress | {doneCount} of {tasks.length}</div>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button onClick={() => submitWorkoutTask({ taskId: today.id, planId: plan.id, playerId: player.id, status: "done", note: "Completed from player dashboard." })} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground glow-cyan">
+              <button onClick={() => submitWorkoutTask({ taskId: today.id, planId: plan.id, playerId: player.id, status: "done", note: "Completed from player dashboard." })} className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan/30 bg-cyan/10 py-3 text-sm font-black text-cyan glow-cyan">
                 <Check className="h-4 w-4" />
                 Mark done
               </button>
-              <label className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.045] py-3 text-sm font-bold">
+              <label className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.045] py-3 text-sm font-bold">
                 <Upload className="h-4 w-4" />
                 Upload proof
                 <input className="hidden" type="file" onChange={(event) => submitWorkoutTask({ taskId: today.id, planId: plan.id, playerId: player.id, status: "done", proofName: event.target.files?.[0]?.name, note: "Proof uploaded from dashboard." })} />
@@ -150,7 +150,7 @@ function PlayerDashboard() {
 function SectionTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="mb-3 mt-7 flex items-center justify-between">
-      <h2 className="text-sm font-black text-foreground">{children}</h2>
+      <h2 className="machine-section-label">{children}</h2>
       {right}
     </div>
   );
@@ -173,7 +173,7 @@ function AttendBtn({ tone, icon: Icon, label, onClick }: { tone: "green" | "ambe
   }[tone];
 
   return (
-    <button onClick={onClick} className={`inline-flex items-center justify-center gap-1.5 rounded-2xl border py-3 text-sm font-bold ${toneClass}`}>
+    <button onClick={onClick} className={`inline-flex items-center justify-center gap-1.5 rounded-xl border py-3 text-sm font-bold ${toneClass}`}>
       <Icon className="h-4 w-4" />
       {label}
     </button>
@@ -184,7 +184,7 @@ function MiniStat({ label, value, tone, icon: Icon }: { label: string; value: st
   return (
     <article className="panel panel-hover p-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] font-semibold text-silver-muted">{label}</div>
+      <div className="font-mono text-[10px] font-black uppercase tracking-[0.12em] text-silver-muted">{label}</div>
         <Icon className={`h-4 w-4 ${tone === "cyan" ? "text-cyan" : "text-silver-muted"}`} />
       </div>
       <div className="metric-nums mt-2 text-3xl font-black">{value}</div>
@@ -194,9 +194,9 @@ function MiniStat({ label, value, tone, icon: Icon }: { label: string; value: st
 
 function HeroStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/24 p-3 text-center">
+    <div className="machine-card p-3 text-center">
       <div className="metric-nums text-lg font-black">{value}</div>
-      <div className="text-[10px] font-semibold text-silver-muted">{label}</div>
+      <div className="font-mono text-[10px] font-semibold text-silver-muted">{label}</div>
     </div>
   );
 }

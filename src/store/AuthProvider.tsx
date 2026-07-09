@@ -63,13 +63,14 @@ async function buildAuthUser(userId: string, fallbackEmail?: string): Promise<Au
 }
 
 export async function readAuthUserForGuard(): Promise<AuthUser | null> {
-  const cached = readCachedAuthUser();
-  if (cached) return cached;
-  if (!hasSupabaseEnv) return null;
+  if (!hasSupabaseEnv) return readCachedAuthUser();
 
   const { data } = await supabase.auth.getSession();
   const sessionUser = data.session?.user;
-  if (!sessionUser) return null;
+  if (!sessionUser) {
+    cacheUser(null);
+    return null;
+  }
 
   try {
     const authUser = await buildAuthUser(sessionUser.id, sessionUser.email);

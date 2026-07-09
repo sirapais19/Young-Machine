@@ -79,13 +79,14 @@ import type {
 } from "@/types/supabase";
 
 type UpdateInput<T extends { id: string }> = Partial<T> & { id: string };
+const DEFAULT_PLAYER_PASSWORD = "Player1234";
 
 export interface AppDataContextValue {
   data: AppData;
   isLoadingData: boolean;
   refreshData: () => Promise<void>;
   resetData: () => void;
-  addPlayer: (player: Omit<Player, "id" | "attendance" | "score" | "assist" | "blocks" | "turnovers" | "avatarHue">) => Player;
+  addPlayer: (player: Omit<Player, "id" | "attendance" | "score" | "assist" | "blocks" | "turnovers" | "avatarHue">) => Promise<Player>;
   updatePlayer: (player: UpdateInput<Player>) => void;
   deletePlayer: (playerId: string) => void;
   togglePlayerPublicProfile: (playerId: string) => void;
@@ -154,6 +155,116 @@ async function selectTable<T>(table: string, query = "*"): Promise<T[]> {
   return (data ?? []) as T[];
 }
 
+function getPlayerAccountErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes("email") && lowerMessage.includes("invalid")) {
+    return "Supabase Auth rejected this email address. Use a real deliverable email for the player login; the app is not checking the inbox, but Supabase validates the address before creating the account.";
+  }
+
+  if (lowerMessage.includes("already") && (lowerMessage.includes("registered") || lowerMessage.includes("exists"))) {
+    return "A Supabase account already exists for this email. Use another email or connect this player to the existing account.";
+  }
+
+  return message || "Unable to create player account.";
+}
+
+async function createSupabasePlayerProfile(player: Pick<Player, "name" | "email">): Promise<ProfileRow> {
+  const email = player.email.trim().toLowerCase();
+  const { data: existing, error: existingError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, status, avatar_url, created_at, updated_at")
+    .eq("email", email)
+    .eq("role", "player")
+    .maybeSingle<ProfileRow>();
+
+  if (existingError) throw existingError;
+  if (existing) {
+    await supabase.from("profiles").update({ full_name: player.name, email }).eq("id", existing.id).throwOnError();
+    return { ...existing, full_name: player.name, email };
+  }
+
+  const { data: currentSession } = await supabase.auth.getSession();
+  const previousSession = currentSession.session;
+
+  const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password: DEFAULT_PLAYER_PASSWORD,
+    options: {
+      data: {
+        full_name: player.name,
+        role: "player",
+      },
+    },
+  });
+
+  if (previousSession) {
+    await supabase.auth.setSession({
+      access_token: previousSession.access_token,
+      refresh_token: previousSession.refresh_token,
+    });
+  } else if (authData.session) {
+    await supabase.auth.signOut();
+  }
+
+  if (signUpError) throw new Error(getPlayerAccountErrorMessage(signUpError));
+  if (!authData.user) throw new Error("Supabase did not return a user for the new player account.");
+
+  const profile: ProfileRow = {
+    id: authData.user.id,
+    full_name: player.name,
+    email,
+    role: "player",
+    status: "active",
+    avatar_url: null,
+    created_at: null,
+    updated_at: null,
+  };
+
+  await supabase
+    .from("profiles")
+    .upsert({
+      id: profile.id,
+      full_name: profile.full_name,
+      email: profile.email,
+      role: profile.role,
+      status: profile.status,
+      avatar_url: profile.avatar_url,
+    })
+    .throwOnError();
+
+  return profile;
+}
+
+async function hydratePlayerProfiles(rows: PlayerWithProfileRow[]) {
+  const missingProfileIds = Array.from(
+    new Set(
+      rows
+        .filter((row) => !(row.profile ?? row.profiles)?.full_name && row.user_id)
+        .map((row) => row.user_id as string),
+    ),
+  );
+
+  if (!missingProfileIds.length) return rows;
+
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, status, avatar_url, created_at, updated_at")
+    .in("id", missingProfileIds);
+
+  if (error) {
+    console.warn("Unable to hydrate player profile names.", error);
+    return rows;
+  }
+
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile as ProfileRow]));
+  return rows.map((row) => ({
+    ...row,
+    profile: row.profile ?? row.profiles ?? (row.user_id ? profileById.get(row.user_id) ?? null : null),
+  }));
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const { currentUser, isLoadingAuth } = useAuth();
   const [data, setData] = useState<AppData>(hasSupabaseEnv ? emptyAppData() : initialData);
@@ -169,7 +280,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIsLoadingData(true);
     try {
       const publicOnly = !currentUser;
-      const playerQuery = publicOnly ? "*, profiles(*)" : "*, profiles(*)";
+      const playerQuery = "*, profile:profiles(id, full_name, email, role, status, avatar_url, created_at, updated_at)";
       const playersRequest = publicOnly
         ? supabase.from("players").select(playerQuery).eq("is_public_profile", true)
         : supabase.from("players").select(playerQuery);
@@ -225,9 +336,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const galleryIds = new Set(galleryRows.map((row) => row.id));
       const completedTrainingCount = trainingRows.filter((row) => row.status === "completed").length;
       const taskToPlan = new Map(workoutTaskRows.map((row) => [row.id, row.workout_plan_id]));
+      const playerRows = await hydratePlayerProfiles((playersResult.data ?? []) as PlayerWithProfileRow[]);
 
       setData({
-        players: mapPlayers((playersResult.data ?? []) as PlayerWithProfileRow[], tournamentStatsRows, attendanceRows, completedTrainingCount),
+        players: mapPlayers(playerRows, tournamentStatsRows, attendanceRows, completedTrainingCount),
         trainingSessions: trainingRows.map(mapTrainingSession),
         attendanceRecords: attendanceRows.map(mapAttendance),
         notifications: notificationRows.map(mapNotification),
@@ -280,20 +392,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       isLoadingData,
       refreshData,
       resetData: () => void refreshData(),
-      addPlayer: (player) => {
+      addPlayer: async (player) => {
         const created: Player = { ...player, id: makeId("p"), attendance: 0, score: 0, assist: 0, blocks: 0, turnovers: 0, avatarHue: 200 };
-        setData((current) => ({ ...current, players: [created, ...current.players] }));
-        void runWrite("Unable to add player.", async () => {
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("id, full_name, email, role, status, avatar_url, created_at, updated_at")
-            .eq("email", player.email)
-            .eq("role", "player")
-            .maybeSingle<ProfileRow>();
-          if (profileError) throw profileError;
-          if (!profile) throw new Error("Create the Supabase Auth player/profile first, then add the player row.");
 
-          await supabase.from("profiles").update({ full_name: player.name, email: player.email }).eq("id", profile.id).throwOnError();
+        if (!hasSupabaseEnv) {
+          setData((current) => ({ ...current, players: [created, ...current.players] }));
+          return created;
+        }
+
+        try {
+          const profile = await createSupabasePlayerProfile(player);
           await supabase
             .from("players")
             .insert({
@@ -312,8 +420,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               is_public_profile: player.isPublic,
             })
             .throwOnError();
-        });
-        return created;
+
+          setData((current) => ({ ...current, players: [created, ...current.players] }));
+          await refreshData();
+          return created;
+        } catch (error) {
+          console.error("Unable to add player.", error);
+          await refreshData();
+          throw error;
+        }
       },
       updatePlayer: (player) => {
         setData((current) => ({ ...current, players: current.players.map((item) => (item.id === player.id ? { ...item, ...player } : item)) }));

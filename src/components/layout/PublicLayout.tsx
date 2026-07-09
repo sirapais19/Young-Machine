@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, X, ArrowRight } from "lucide-react";
+import { ArrowRight, Cpu, Menu, X } from "lucide-react";
 import { YMLogo } from "@/components/ym/Logo";
 import { cn } from "@/lib/utils";
 
@@ -20,13 +20,14 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <div className="machine-grid-bg min-h-screen text-foreground">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#030303]/88 backdrop-blur-xl">
+        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center" onClick={() => setOpen(false)}>
             <YMLogo showWordmark />
           </Link>
-          <nav className="hidden lg:flex items-center gap-1">
+
+          <nav className="hidden items-center gap-1 lg:flex">
             {nav.map((n) => {
               const active = n.to === "/" ? path === "/" : path.startsWith(n.to);
               return (
@@ -34,8 +35,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   key={n.to}
                   to={n.to}
                   className={cn(
-                    "px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                    active ? "text-cyan" : "text-silver-muted hover:text-foreground"
+                    "rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
+                    active ? "border border-white/10 bg-white/[0.055] text-foreground" : "text-silver-muted hover:bg-white/[0.04] hover:text-foreground",
                   )}
                 >
                   {n.label}
@@ -43,31 +44,34 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
-          <div className="hidden lg:flex items-center gap-2">
+
+          <div className="hidden items-center gap-2 lg:flex">
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-cyan"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2.5 text-sm font-bold text-foreground hover:border-cyan/35 hover:bg-white/[0.09]"
             >
               Sign in <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+
           <button
-            className="lg:hidden grid h-10 w-10 place-items-center rounded-md border border-white/10 text-foreground"
+            className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-foreground lg:hidden"
             onClick={() => setOpen((o) => !o)}
             aria-label="Toggle menu"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
+
         {open && (
-          <div className="lg:hidden border-t border-white/5 bg-background">
-            <div className="px-4 py-3 flex flex-col gap-1">
+          <div className="border-t border-white/10 bg-[#030303] lg:hidden">
+            <div className="flex flex-col gap-1 px-4 py-3">
               {nav.map((n) => (
                 <Link
                   key={n.to}
                   to={n.to}
                   onClick={() => setOpen(false)}
-                  className="px-3 py-3 rounded-md text-base text-silver hover:bg-white/5"
+                  className="rounded-xl px-3 py-3 text-base font-semibold text-silver hover:bg-white/5"
                 >
                   {n.label}
                 </Link>
@@ -75,7 +79,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               <Link
                 to="/login"
                 onClick={() => setOpen(false)}
-                className="mt-2 rounded-md bg-primary px-4 py-3 text-center text-sm font-semibold text-primary-foreground"
+                className="mt-2 rounded-xl border border-cyan/30 bg-cyan/10 px-4 py-3 text-center text-sm font-bold text-cyan"
               >
                 Sign in
               </Link>
@@ -86,46 +90,59 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
       <main>{children}</main>
 
-      <footer className="mt-24 border-t border-white/5 bg-black/40">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 grid gap-8 md:grid-cols-4">
+      <footer className="mt-24 border-t border-white/10 bg-[#030303]/88">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
           <div>
             <YMLogo showWordmark />
-            <p className="mt-4 text-sm text-silver-muted max-w-xs">
-              Young Machine — a competitive Ultimate Frisbee club. Train hard, play smart, move as one.
+            <p className="mt-4 max-w-xs text-sm leading-6 text-silver-muted">
+              Young Machine is a robotic squad system for ultimate frisbee training, tournaments, and performance.
             </p>
           </div>
+          <FooterColumn title="Club" links={[["About", "/about"], ["Players", "/players"], ["Coaches", "/coaches"]]} />
+          <FooterColumn title="Compete" links={[["Tournaments", "/tournaments"], ["Achievements", "/achievements"], ["Gallery", "/gallery"]]} />
           <div>
-            <h4 className="text-xs uppercase tracking-widest text-cyan mb-3">Club</h4>
-            <ul className="space-y-2 text-sm text-silver-muted">
-              <li><Link to="/about" className="hover:text-foreground">About</Link></li>
-              <li><Link to="/players" className="hover:text-foreground">Players</Link></li>
-              <li><Link to="/coaches" className="hover:text-foreground">Coaches</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-xs uppercase tracking-widest text-cyan mb-3">Compete</h4>
-            <ul className="space-y-2 text-sm text-silver-muted">
-              <li><Link to="/tournaments" className="hover:text-foreground">Tournaments</Link></li>
-              <li><Link to="/achievements" className="hover:text-foreground">Achievements</Link></li>
-              <li><Link to="/gallery" className="hover:text-foreground">Gallery</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-xs uppercase tracking-widest text-cyan mb-3">Contact</h4>
+            <h4 className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-silver">
+              <Cpu className="h-3.5 w-3.5 text-cyan" />
+              Contact
+            </h4>
             <ul className="space-y-2 text-sm text-silver-muted">
               <li>hello@youngmachine.club</li>
-              <li>USJ Field · Selangor</li>
-              <li><Link to="/contact" className="hover:text-foreground">Get in touch</Link></li>
+              <li>USJ Field, Selangor</li>
+              <li>
+                <Link to="/contact" className="hover:text-foreground">
+                  Get in touch
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/5">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between text-xs text-silver-muted">
-            <span>© {new Date().getFullYear()} Young Machine</span>
-            <span className="tracking-widest">MOVE · AS · ONE</span>
+        <div className="border-t border-white/10">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 text-xs text-silver-muted sm:px-6 lg:px-8">
+            <span>Copyright {new Date().getFullYear()} Young Machine</span>
+            <span className="tracking-widest">BUILT LIKE A MACHINE</span>
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function FooterColumn({ title, links }: { title: string; links: [string, string][] }) {
+  return (
+    <div>
+      <h4 className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-silver">
+        <Cpu className="h-3.5 w-3.5 text-cyan" />
+        {title}
+      </h4>
+      <ul className="space-y-2 text-sm text-silver-muted">
+        {links.map(([label, to]) => (
+          <li key={to}>
+            <Link to={to} className="hover:text-foreground">
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

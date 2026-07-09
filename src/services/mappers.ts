@@ -143,6 +143,7 @@ export function fromPublishStatus(status: PublishStatus): string {
 
 export function mapPlayers(rows: PlayerWithProfileRow[], statsRows: TournamentPlayerStatsRow[], attendanceRows: TrainingAttendanceRow[], completedTrainingCount: number): Player[] {
   return rows.map((row, index) => {
+    const profile = row.profile ?? row.profiles;
     const stats = statsRows.filter((item) => item.player_id === row.id);
     const attended = attendanceRows.filter((item) => item.player_id === row.id && item.attendance_status === "attended").length;
     const willAttend = attendanceRows.filter((item) => item.player_id === row.id && item.attendance_status === "will_attend").length;
@@ -151,8 +152,8 @@ export function mapPlayers(rows: PlayerWithProfileRow[], statsRows: TournamentPl
 
     return {
       id: row.id,
-      name: row.profiles?.full_name ?? "Unnamed player",
-      email: row.profiles?.email ?? "",
+      name: profile?.full_name?.trim() || "Unnamed player",
+      email: profile?.email ?? "",
       jersey: Number(row.jersey_no ?? 0),
       position: isPosition(row.position) ? row.position : positionFallback,
       dateOfBirth: row.date_of_birth ?? "",

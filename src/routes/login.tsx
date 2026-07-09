@@ -9,12 +9,6 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const demos = [
-  { label: "Coach", email: "coach@youngmachine.club" },
-  { label: "Manager", email: "manager@youngmachine.club" },
-  { label: "Player", email: "player@youngmachine.club" },
-];
-
 function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoadingAuth } = useAuth();
@@ -98,25 +92,6 @@ function LoginPage() {
               {isSubmitting ? "Signing in..." : "Sign in"} <ArrowRight className="h-4 w-4" />
             </button>
           </form>
-
-          <div className="mt-6 grid gap-2 text-xs">
-            <div className="text-silver-muted">Known account emails</div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {demos.map((demo) => (
-                <button
-                  key={demo.email}
-                  onClick={() => {
-                    setEmail(demo.email);
-                    setError("");
-                  }}
-                  className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-left hover:border-cyan/40"
-                >
-                  <div className="font-semibold">{demo.label}</div>
-                  <div className="text-silver-muted">{demo.email}</div>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="mt-8 text-xs text-silver-muted">
             <Link to="/" className="hover:text-foreground">
