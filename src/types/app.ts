@@ -5,7 +5,11 @@ export type TrainingStatus = "Upcoming" | "Completed" | "Cancelled";
 export type WorkoutStatus = "Active" | "Completed" | "Draft";
 export type WorkoutTaskType = "Strength" | "Running" | "Conditioning" | "Skill" | "Recovery" | "Other";
 export type TournamentStatus = "Draft" | "Upcoming" | "Completed" | "Cancelled";
+export type TournamentEventType = "Tournament" | "Friendly";
 export type TournamentRole = "main player" | "reserve" | "captain";
+export type LineupPlayerRole = "Handler" | "Cutter" | "Hybrid" | "Defender" | "Captain" | "Reserve";
+export type LineupRatio = "A" | "B";
+export type LineupPointEventType = "team_score" | "break" | "opponent_score" | "turnover" | "block" | "timeout" | "note";
 export type RecoveryStatus = "Active" | "Recovering" | "Recovered";
 export type PublishStatus = "Published" | "Draft";
 export type NotificationType = "training" | "workout" | "tournament" | "general";
@@ -103,10 +107,12 @@ export interface Tournament {
   id: string;
   name: string;
   location: string;
+  eventType: TournamentEventType;
   start: string;
   end: string;
   description: string;
   status: TournamentStatus;
+  totalGames: number;
   result?: string;
 }
 
@@ -121,10 +127,16 @@ export interface TournamentStats {
   id: string;
   tournamentId: string;
   playerId: string;
+  teamLineupId?: string | null;
+  gameNo: number;
   score: number;
   assist: number;
   blocks: number;
   turnovers: number;
+  catches: number;
+  drops: number;
+  pointsPlayed: number;
+  plusMinus: number;
   gamesPlayed: number;
   note?: string;
 }
@@ -132,7 +144,7 @@ export interface TournamentStats {
 export interface TeamLineupPlayer {
   id: string;
   playerId: string;
-  position: string;
+  position: LineupPlayerRole | string;
   lineOrder: number;
 }
 
@@ -140,9 +152,48 @@ export interface TeamLineup {
   id: string;
   tournamentId: string;
   name: string;
+  ratio: LineupRatio;
   notes?: string;
   players: TeamLineupPlayer[];
   createdAt: string;
+}
+
+export interface TournamentLineupGameStats {
+  id: string;
+  tournamentId: string;
+  teamLineupId: string;
+  gameNo: number;
+  lineScore: number;
+  breaks: number;
+  turnovers: number;
+  bolos: number;
+  conceded: number;
+  scorerPlayerId?: string | null;
+  assistPlayerId?: string | null;
+  blockPlayerId?: string | null;
+  note?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TournamentLineupPointEvent {
+  id: string;
+  tournamentId: string;
+  teamLineupId: string;
+  gameNo: number;
+  pointNo: number;
+  eventOrder: number;
+  eventType: LineupPointEventType;
+  teamScoreAfter: number;
+  opponentScoreAfter: number;
+  scorerPlayerId?: string | null;
+  assistPlayerId?: string | null;
+  blockPlayerId?: string | null;
+  turnoverPlayerId?: string | null;
+  note?: string;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface FitnessRecord {
@@ -221,6 +272,8 @@ export interface AppData {
   tournamentPlayers: TournamentPlayer[];
   tournamentStats: TournamentStats[];
   teamLineups: TeamLineup[];
+  tournamentLineupGameStats: TournamentLineupGameStats[];
+  tournamentLineupPointEvents: TournamentLineupPointEvent[];
   fitnessRecords: FitnessRecord[];
   injuryRecords: InjuryRecord[];
   notifications: Notification[];

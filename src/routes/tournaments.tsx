@@ -29,9 +29,13 @@ function TournamentsPage() {
                   <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{tournament.start} to {tournament.end}</span>
                 </div>
               </div>
-              <StatusBadge tone={tournament.status === "Upcoming" ? "cyan" : "green"}>{tournament.status}</StatusBadge>
+              <div className="flex flex-col items-end gap-2">
+                <StatusBadge tone={tournament.eventType === "Friendly" ? "silver" : "cyan"}>{tournament.eventType}</StatusBadge>
+                <StatusBadge tone={tournament.status === "Upcoming" ? "cyan" : "green"}>{tournament.status}</StatusBadge>
+              </div>
             </div>
             <p className="mt-4 text-sm text-silver-muted">{tournament.description}</p>
+            <div className="mt-3 text-xs font-bold text-silver-muted">{tournament.totalGames} game{tournament.totalGames === 1 ? "" : "s"} scheduled</div>
             {tournament.result && <div className="mt-4 text-sm font-bold text-cyan">{tournament.result}</div>}
           </div>
         ))}

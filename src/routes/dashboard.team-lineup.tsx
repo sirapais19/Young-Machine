@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import { TeamLineupPage } from "@/components/app/PrototypePages";
+import { TeamLineupPage } from "@/components/tournaments/TournamentPages";
 
 export const Route = createFileRoute("/dashboard/team-lineup")({
   head: () => ({ meta: [{ title: "Team Lineup | YM" }, { name: "robots", content: "noindex" }] }),

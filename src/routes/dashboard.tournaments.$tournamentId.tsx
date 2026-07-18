@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import { TournamentDetailPage } from "@/components/app/PrototypePages";
+import { TournamentDetailPage } from "@/components/tournaments/TournamentPages";
 
 export const Route = createFileRoute("/dashboard/tournaments/$tournamentId")({
   head: () => ({ meta: [{ title: "Tournament Detail | YM" }, { name: "robots", content: "noindex" }] }),

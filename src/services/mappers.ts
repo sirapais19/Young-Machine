@@ -15,6 +15,10 @@ import type {
   RecoveryStatus,
   TeamLineup,
   Tournament,
+  TournamentEventType,
+  TournamentLineupGameStats,
+  TournamentLineupPointEvent,
+  LineupPointEventType,
   TournamentPlayer,
   TournamentRole,
   TournamentStats,
@@ -39,6 +43,8 @@ import type {
   PlayerWithProfileRow,
   TeamLineupPlayerRow,
   TeamLineupRow,
+  TournamentLineupGameStatsRow,
+  TournamentLineupPointEventRow,
   TournamentPlayerRow,
   TournamentPlayerStatsRow,
   TournamentRow,
@@ -113,6 +119,14 @@ export function toTournamentStatus(status?: string | null): TournamentStatus {
 
 export function fromTournamentStatus(status: TournamentStatus): string {
   return status.toLowerCase();
+}
+
+export function toTournamentEventType(eventType?: string | null): TournamentEventType {
+  return eventType === "friendly" || eventType === "Friendly" ? "Friendly" : "Tournament";
+}
+
+export function fromTournamentEventType(eventType: TournamentEventType): string {
+  return eventType === "Friendly" ? "friendly" : "tournament";
 }
 
 export function toTournamentRole(role?: string | null): TournamentRole {
@@ -268,21 +282,25 @@ export const mapTournament = (row: TournamentRow): Tournament => ({
   id: row.id,
   name: row.name,
   location: row.location,
+  eventType: toTournamentEventType(row.event_type),
   start: row.start_date,
   end: row.end_date,
   description: row.description ?? "",
   result: row.result ?? "",
   status: toTournamentStatus(row.status),
+  totalGames: Math.max(1, Number(row.total_games ?? 1)),
 });
 
 export const tournamentPayload = (tournament: Partial<Tournament>) => ({
   name: tournament.name,
   location: tournament.location,
+  event_type: tournament.eventType ? fromTournamentEventType(tournament.eventType) : undefined,
   start_date: tournament.start,
   end_date: tournament.end,
   description: tournament.description ?? "",
   result: tournament.result ?? "",
   status: tournament.status ? fromTournamentStatus(tournament.status) : undefined,
+  total_games: tournament.totalGames == null ? undefined : Math.max(1, Number(tournament.totalGames)),
 });
 
 export const mapTournamentPlayer = (row: TournamentPlayerRow): TournamentPlayer => ({
@@ -296,10 +314,16 @@ export const mapTournamentStats = (row: TournamentPlayerStatsRow): TournamentSta
   id: row.id,
   tournamentId: row.tournament_id,
   playerId: row.player_id,
-  score: Number(row.total_score ?? 0),
-  assist: Number(row.total_assist ?? 0),
-  blocks: Number(row.total_blocks ?? 0),
-  turnovers: Number(row.total_turnovers ?? 0),
+  teamLineupId: row.team_lineup_id ?? null,
+  gameNo: Math.max(1, Number(row.game_no ?? 1)),
+  score: Number(row.goals ?? row.total_score ?? 0),
+  assist: Number(row.assists ?? row.total_assist ?? 0),
+  blocks: Number(row.blocks ?? row.total_blocks ?? 0),
+  turnovers: Number(row.turnovers ?? row.total_turnovers ?? 0),
+  catches: Number(row.catches ?? 0),
+  drops: Number(row.drops ?? 0),
+  pointsPlayed: Number(row.points_played ?? row.total_games_played ?? 0),
+  plusMinus: Number(row.plus_minus ?? 0),
   gamesPlayed: Number(row.total_games_played ?? 0),
   note: row.note ?? "",
 });
@@ -307,10 +331,20 @@ export const mapTournamentStats = (row: TournamentPlayerStatsRow): TournamentSta
 export const tournamentStatsPayload = (stats: Partial<TournamentStats>) => ({
   tournament_id: stats.tournamentId,
   player_id: stats.playerId,
+  team_lineup_id: stats.teamLineupId ?? null,
+  game_no: Math.max(1, Number(stats.gameNo ?? 1)),
   total_score: stats.score ?? 0,
   total_assist: stats.assist ?? 0,
   total_blocks: stats.blocks ?? 0,
   total_turnovers: stats.turnovers ?? 0,
+  goals: stats.score ?? 0,
+  assists: stats.assist ?? 0,
+  blocks: stats.blocks ?? 0,
+  turnovers: stats.turnovers ?? 0,
+  catches: stats.catches ?? 0,
+  drops: stats.drops ?? 0,
+  points_played: stats.pointsPlayed ?? stats.gamesPlayed ?? 0,
+  plus_minus: stats.plusMinus ?? 0,
   total_games_played: stats.gamesPlayed ?? 0,
   note: stats.note ?? "",
 });
@@ -320,6 +354,7 @@ export function mapLineups(lineups: TeamLineupRow[], players: TeamLineupPlayerRo
     id: lineup.id,
     tournamentId: lineup.tournament_id,
     name: lineup.lineup_name,
+    ratio: lineup.ratio === "B" ? "B" : "A",
     notes: lineup.note ?? "",
     createdAt: lineup.created_at ?? new Date().toISOString(),
     players: players
@@ -327,6 +362,81 @@ export function mapLineups(lineups: TeamLineupRow[], players: TeamLineupPlayerRo
       .map((row) => ({ id: row.id, playerId: row.player_id, position: row.position, lineOrder: row.line_order })),
   }));
 }
+
+export const mapTournamentLineupGameStats = (row: TournamentLineupGameStatsRow): TournamentLineupGameStats => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  teamLineupId: row.team_lineup_id,
+  gameNo: Math.max(1, Number(row.game_no ?? 1)),
+  lineScore: Number(row.line_score ?? 0),
+  breaks: Number(row.breaks ?? 0),
+  turnovers: Number(row.turnovers ?? 0),
+  bolos: Number(row.bolos ?? 0),
+  conceded: Number(row.conceded ?? 0),
+  scorerPlayerId: row.scorer_player_id ?? null,
+  assistPlayerId: row.assist_player_id ?? null,
+  blockPlayerId: row.block_player_id ?? null,
+  note: row.note ?? "",
+  createdAt: row.created_at ?? new Date().toISOString(),
+  updatedAt: row.updated_at ?? undefined,
+});
+
+export const tournamentLineupGameStatsPayload = (stats: Partial<TournamentLineupGameStats>) => ({
+  tournament_id: stats.tournamentId,
+  team_lineup_id: stats.teamLineupId,
+  game_no: Math.max(1, Number(stats.gameNo ?? 1)),
+  line_score: stats.lineScore ?? 0,
+  breaks: stats.breaks ?? 0,
+  turnovers: stats.turnovers ?? 0,
+  bolos: stats.bolos ?? 0,
+  conceded: stats.conceded ?? 0,
+  scorer_player_id: stats.scorerPlayerId || null,
+  assist_player_id: stats.assistPlayerId || null,
+  block_player_id: stats.blockPlayerId || null,
+  note: stats.note ?? "",
+});
+
+function toLineupPointEventType(value?: string | null): LineupPointEventType {
+  if (value === "break" || value === "opponent_score" || value === "turnover" || value === "block" || value === "timeout" || value === "note") return value;
+  return "team_score";
+}
+
+export const mapTournamentLineupPointEvent = (row: TournamentLineupPointEventRow): TournamentLineupPointEvent => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  teamLineupId: row.team_lineup_id,
+  gameNo: Math.max(1, Number(row.game_no ?? 1)),
+  pointNo: Math.max(1, Number(row.point_no ?? 1)),
+  eventOrder: Math.max(1, Number(row.event_order ?? row.point_no ?? 1)),
+  eventType: toLineupPointEventType(row.event_type),
+  teamScoreAfter: Number(row.team_score_after ?? 0),
+  opponentScoreAfter: Number(row.opponent_score_after ?? 0),
+  scorerPlayerId: row.scorer_player_id ?? null,
+  assistPlayerId: row.assist_player_id ?? null,
+  blockPlayerId: row.block_player_id ?? null,
+  turnoverPlayerId: row.turnover_player_id ?? null,
+  note: row.note ?? "",
+  createdBy: row.created_by ?? null,
+  createdAt: row.created_at ?? new Date().toISOString(),
+  updatedAt: row.updated_at ?? undefined,
+});
+
+export const tournamentLineupPointEventPayload = (event: Partial<TournamentLineupPointEvent>) => ({
+  tournament_id: event.tournamentId,
+  team_lineup_id: event.teamLineupId,
+  game_no: Math.max(1, Number(event.gameNo ?? 1)),
+  point_no: Math.max(1, Number(event.pointNo ?? 1)),
+  event_order: Math.max(1, Number(event.eventOrder ?? event.pointNo ?? 1)),
+  event_type: event.eventType ?? "team_score",
+  team_score_after: Math.max(0, Number(event.teamScoreAfter ?? 0)),
+  opponent_score_after: Math.max(0, Number(event.opponentScoreAfter ?? 0)),
+  scorer_player_id: event.scorerPlayerId || null,
+  assist_player_id: event.assistPlayerId || null,
+  block_player_id: event.blockPlayerId || null,
+  turnover_player_id: event.turnoverPlayerId || null,
+  note: event.note ?? "",
+  created_by: event.createdBy ?? undefined,
+});
 
 export const mapFitnessRecord = (row: FitnessRecordRow): FitnessRecord => ({
   id: row.id,
@@ -444,6 +554,8 @@ export function emptyAppData(): AppData {
     tournamentPlayers: [],
     tournamentStats: [],
     teamLineups: [],
+    tournamentLineupGameStats: [],
+    tournamentLineupPointEvents: [],
     fitnessRecords: [],
     injuryRecords: [],
     notifications: [],

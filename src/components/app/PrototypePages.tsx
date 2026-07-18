@@ -34,7 +34,7 @@ import { PlayerAvatar } from "@/components/ym/Avatar";
 import { StatusBadge } from "@/components/ym/StatusBadge";
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
-import type { AttendanceStatus, Player, Position, RecoveryStatus, TournamentRole, TournamentStats, TrainingStatus, WorkoutTaskType } from "@/types/app";
+import type { AttendanceStatus, LineupPlayerRole, Player, Position, RecoveryStatus, TeamLineup, Tournament, TournamentEventType, TournamentRole, TournamentStats, TournamentStatus, TrainingStatus, WorkoutTaskType } from "@/types/app";
 
 const positions: Position[] = ["Handler", "Cutter", "Hybrid", "Defender"];
 const injuryStatuses: (RecoveryStatus | "None")[] = ["None", "Active", "Recovering", "Recovered"];
@@ -42,6 +42,10 @@ const attendanceStatuses: AttendanceStatus[] = ["Going", "Maybe", "Out", "Attend
 const workoutTypes: WorkoutTaskType[] = ["Strength", "Running", "Conditioning", "Skill", "Recovery", "Other"];
 const genders = ["Male", "Female", "Other"];
 const experienceLevels = ["Beginner", "Intermediate", "Advanced"];
+const tournamentStatuses: TournamentStatus[] = ["Draft", "Upcoming", "Completed", "Cancelled"];
+const tournamentEventTypes: TournamentEventType[] = ["Tournament", "Friendly"];
+const tournamentRoles: TournamentRole[] = ["main player", "reserve", "captain"];
+const lineupRoles: LineupPlayerRole[] = ["Handler", "Cutter", "Hybrid", "Defender", "Captain", "Reserve"];
 
 export function CoachPlayersPage() {
   const { data, deletePlayer, togglePlayerPublicProfile } = useAppData();
@@ -807,7 +811,7 @@ export function TournamentsListPage() {
 export function TournamentCreatePage() {
   const { data, addTournament } = useAppData();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", location: "", start: "", end: "", description: "", result: "", status: "Upcoming" as const });
+  const [form, setForm] = useState({ name: "", location: "", eventType: "Tournament" as const, start: "", end: "", description: "", result: "", status: "Upcoming" as const, totalGames: 1 });
   const [selected, setSelected] = useState<string[]>(data.players.slice(0, 7).map((player) => player.id));
   const save = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1005,6 +1009,7 @@ export function TeamLineupCreatePage() {
     createLineup({
       name,
       tournamentId,
+      ratio: "A",
       notes,
       players: selected.map((playerId, index) => ({ id: `${playerId}-${index}`, playerId, position: data.players.find((player) => player.id === playerId)?.position ?? "Hybrid", lineOrder: index + 1 })),
     });
@@ -1721,6 +1726,12 @@ function TournamentStatsEditor({
           assist: Number(form.assist),
           blocks: Number(form.blocks),
           turnovers: Number(form.turnovers),
+          teamLineupId: stats?.teamLineupId ?? null,
+          gameNo: stats?.gameNo ?? 1,
+          catches: stats?.catches ?? 0,
+          drops: stats?.drops ?? 0,
+          pointsPlayed: stats?.pointsPlayed ?? Number(form.gamesPlayed),
+          plusMinus: stats?.plusMinus ?? 0,
           gamesPlayed: Number(form.gamesPlayed),
           note: form.note,
         });

@@ -116,11 +116,13 @@ export interface TournamentRow {
   id: string;
   name: string;
   location: string;
+  event_type?: "tournament" | "friendly" | string | null;
   start_date: string;
   end_date: string;
   description: string | null;
   result: string | null;
   status: "draft" | "upcoming" | "completed" | "cancelled" | string;
+  total_games?: number | null;
   season_id: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -138,10 +140,20 @@ export interface TournamentPlayerStatsRow {
   id: string;
   tournament_id: string;
   player_id: string;
+  team_lineup_id?: string | null;
+  game_no?: number | null;
   total_score: number | null;
   total_assist: number | null;
   total_blocks: number | null;
   total_turnovers: number | null;
+  goals?: number | null;
+  assists?: number | null;
+  blocks?: number | null;
+  turnovers?: number | null;
+  catches?: number | null;
+  drops?: number | null;
+  points_played?: number | null;
+  plus_minus?: number | null;
   total_games_played: number | null;
   note: string | null;
   created_at: string | null;
@@ -152,6 +164,7 @@ export interface TeamLineupRow {
   id: string;
   tournament_id: string;
   lineup_name: string;
+  ratio?: string | null;
   note: string | null;
   created_by: string | null;
   created_at: string | null;
@@ -165,6 +178,44 @@ export interface TeamLineupPlayerRow {
   position: string;
   line_order: number;
   created_at?: string | null;
+}
+
+export interface TournamentLineupGameStatsRow {
+  id: string;
+  tournament_id: string;
+  team_lineup_id: string;
+  game_no: number | null;
+  line_score: number | null;
+  breaks: number | null;
+  turnovers: number | null;
+  bolos: number | null;
+  conceded: number | null;
+  scorer_player_id: string | null;
+  assist_player_id: string | null;
+  block_player_id: string | null;
+  note: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface TournamentLineupPointEventRow {
+  id: string;
+  tournament_id: string;
+  team_lineup_id: string;
+  game_no: number | null;
+  point_no: number | null;
+  event_order?: number | null;
+  event_type: string;
+  team_score_after: number | null;
+  opponent_score_after: number | null;
+  scorer_player_id: string | null;
+  assist_player_id: string | null;
+  block_player_id: string | null;
+  turnover_player_id: string | null;
+  note: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface FitnessRecordRow {

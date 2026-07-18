@@ -93,10 +93,12 @@ export interface Tournament {
   id: string;
   name: string;
   location: string;
+  eventType?: "Tournament" | "Friendly";
   start: string;
   end: string;
   description: string;
   status: "Draft" | "Upcoming" | "Completed" | "Cancelled";
+  totalGames?: number;
   result?: string;
 }
 

@@ -22,6 +22,8 @@ import {
   mapNotification,
   mapPlayers,
   mapTournament,
+  mapTournamentLineupGameStats,
+  mapTournamentLineupPointEvent,
   mapTournamentPlayer,
   mapTournamentStats,
   mapTrainingSession,
@@ -30,6 +32,8 @@ import {
   mapWorkoutSubmission,
   mapWorkoutTask,
   tournamentPayload,
+  tournamentLineupGameStatsPayload,
+  tournamentLineupPointEventPayload,
   tournamentStatsPayload,
   trainingPayload,
   workoutPlanPayload,
@@ -48,7 +52,10 @@ import type {
   Notification,
   Player,
   TeamLineup,
+  TournamentPlayer,
   Tournament,
+  TournamentLineupGameStats,
+  TournamentLineupPointEvent,
   TournamentStats,
   TrainingSession,
   WorkoutPlan,
@@ -67,6 +74,8 @@ import type {
   ProfileRow,
   TeamLineupPlayerRow,
   TeamLineupRow,
+  TournamentLineupGameStatsRow,
+  TournamentLineupPointEventRow,
   TournamentPlayerRow,
   TournamentPlayerStatsRow,
   TournamentRow,
@@ -108,13 +117,34 @@ export interface AppDataContextValue {
   reviewWorkoutSubmission: (submissionId: string) => void;
   deleteWorkoutSubmission: (submissionId: string) => void;
   addTournament: (tournament: Omit<Tournament, "id">, playerIds?: string[]) => Tournament;
+  createTournamentWithLineups: (payload: {
+    tournament: Omit<Tournament, "id">;
+    tournamentPlayers: Omit<TournamentPlayer, "id" | "tournamentId">[];
+    lineups: Omit<TeamLineup, "id" | "tournamentId" | "createdAt">[];
+  }) => Promise<Tournament>;
+  updateTournamentWithLineups: (
+    tournamentId: string,
+    payload: {
+      tournament: Partial<Tournament>;
+      tournamentPlayers: Omit<TournamentPlayer, "id" | "tournamentId">[];
+      lineups: (Omit<TeamLineup, "tournamentId" | "createdAt"> & { id?: string })[];
+    },
+  ) => void;
   updateTournament: (tournament: UpdateInput<Tournament>) => void;
   deleteTournament: (tournamentId: string) => void;
   selectTournamentPlayer: (tournamentId: string, playerId: string, role: "main player" | "reserve" | "captain") => void;
   removeTournamentPlayer: (tournamentId: string, playerId: string) => void;
   updateTournamentPlayerRole: (tournamentId: string, playerId: string, role: "main player" | "reserve" | "captain") => void;
   updateTournamentStats: (stats: Omit<TournamentStats, "id"> & { id?: string }) => void;
+  saveGameStats: (tournamentId: string, gameNo: number, lineupId: string | null, stats: (Omit<TournamentStats, "id" | "tournamentId" | "gameNo" | "teamLineupId"> & { id?: string })[]) => void;
   deleteTournamentStats: (statsId: string) => void;
+  saveLineupGameStats: (stats: Omit<TournamentLineupGameStats, "id" | "createdAt" | "updatedAt"> & { id?: string }) => void;
+  updateLineupGameStats: (stats: UpdateInput<TournamentLineupGameStats>) => void;
+  deleteLineupGameStats: (statsId: string) => void;
+  createLineupPointEvent: (event: Omit<TournamentLineupPointEvent, "id" | "createdAt" | "updatedAt" | "createdBy" | "eventOrder"> & { id?: string; eventOrder?: number }) => void;
+  updateLineupPointEvent: (event: UpdateInput<TournamentLineupPointEvent>) => void;
+  deleteLineupPointEvent: (eventId: string) => void;
+  updateLineupRatio: (lineupId: string, ratio: "A" | "B") => void;
   createLineup: (lineup: Omit<TeamLineup, "id" | "createdAt">) => TeamLineup;
   updateLineup: (lineup: UpdateInput<TeamLineup>) => void;
   deleteLineup: (lineupId: string) => void;
@@ -144,6 +174,130 @@ const makeId = (prefix: string) => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return createId(prefix);
 };
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function assertUuid(value: string | null | undefined, label: string) {
+  if (!value || !uuidPattern.test(value)) throw new Error(`${label} is missing or is not a valid Supabase UUID.`);
+}
+
+function teamLineupPlayerPayload(players: TeamLineup["players"], lineupId: string) {
+  assertUuid(lineupId, "Lineup ID");
+  return players.map((row, index) => {
+    assertUuid(row.playerId, "Player ID");
+    return {
+      team_lineup_id: lineupId,
+      player_id: row.playerId,
+      position: row.position,
+      line_order: Math.max(1, Number(row.lineOrder || index + 1)),
+    };
+  });
+}
+
+function validateLineupStatsPayload(stats: Partial<TournamentLineupGameStats>, lineupPlayers: TeamLineup["players"] = [], totalGames = 1) {
+  assertUuid(stats.tournamentId, "Tournament ID");
+  assertUuid(stats.teamLineupId, "Lineup ID");
+  if (Number(stats.gameNo ?? 0) < 1) throw new Error("Game number must be at least 1.");
+  if (Number(stats.gameNo ?? 1) > Math.max(1, Number(totalGames))) throw new Error(`Game number cannot exceed ${Math.max(1, Number(totalGames))}.`);
+  if (!lineupPlayers.length) throw new Error("Cannot save stats because this lineup has no players.");
+  const lineupPlayerIds = new Set(lineupPlayers.map((player) => player.playerId));
+  for (const [label, playerId] of [
+    ["Scorer", stats.scorerPlayerId],
+    ["Assist", stats.assistPlayerId],
+    ["Block", stats.blockPlayerId],
+  ] as const) {
+    if (playerId) {
+      assertUuid(playerId, `${label} player ID`);
+      if (!lineupPlayerIds.has(playerId)) throw new Error(`${label} must be selected from this lineup.`);
+    }
+  }
+  for (const [label, value] of [
+    ["Line score", stats.lineScore],
+    ["Breaks", stats.breaks],
+    ["Turnovers", stats.turnovers],
+    ["Bolos", stats.bolos],
+    ["Conceded", stats.conceded],
+  ] as const) {
+    if (Number(value ?? 0) < 0) throw new Error(`${label} cannot be negative.`);
+  }
+}
+
+function validateLineupPointEventPayload(event: Partial<TournamentLineupPointEvent>, lineupPlayers: TeamLineup["players"] = [], totalGames = 1) {
+  assertUuid(event.tournamentId, "Tournament ID");
+  assertUuid(event.teamLineupId, "Lineup ID");
+  if (Number(event.gameNo ?? 0) < 1) throw new Error("Game number must be at least 1.");
+  if (Number(event.gameNo ?? 1) > Math.max(1, Number(totalGames))) throw new Error(`Game number cannot exceed ${Math.max(1, Number(totalGames))}.`);
+  if (!event.eventType) throw new Error("Event type is required.");
+  if ((event.note ?? "").length > 500) throw new Error("Note cannot exceed 500 characters.");
+  if (Number(event.teamScoreAfter ?? 0) < 0 || Number(event.opponentScoreAfter ?? 0) < 0) throw new Error("Score cannot be negative.");
+  const lineupPlayerIds = new Set(lineupPlayers.map((player) => player.playerId));
+  const validatePlayer = (playerId: string | null | undefined, label: string, required = false) => {
+    if (!playerId) {
+      if (required) throw new Error(`${label} is required.`);
+      return;
+    }
+    assertUuid(playerId, `${label} player ID`);
+    if (!lineupPlayerIds.has(playerId)) throw new Error(`${label} must be selected from this lineup.`);
+  };
+  const isTeamPoint = event.eventType === "team_score" || event.eventType === "break";
+  validatePlayer(event.scorerPlayerId, "Scorer", isTeamPoint);
+  validatePlayer(event.assistPlayerId, "Assist");
+  validatePlayer(event.blockPlayerId, "Block", event.eventType === "block");
+  validatePlayer(event.turnoverPlayerId, "Turnover player", event.eventType === "turnover");
+}
+
+function sortPointEvents(events: TournamentLineupPointEvent[]) {
+  return [...events].sort((a, b) => (a.eventOrder || a.pointNo) - (b.eventOrder || b.pointNo));
+}
+
+function recalculatePointEvents(events: TournamentLineupPointEvent[]) {
+  let teamScore = 0;
+  let opponentScore = 0;
+  return sortPointEvents(events).map((event, index) => {
+    if (event.eventType === "team_score" || event.eventType === "break") teamScore += 1;
+    if (event.eventType === "opponent_score") opponentScore += 1;
+    return {
+      ...event,
+      eventOrder: index + 1,
+      pointNo: index + 1,
+      teamScoreAfter: teamScore,
+      opponentScoreAfter: opponentScore,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+}
+
+function recalculatePointEventsForGame(events: TournamentLineupPointEvent[], tournamentId: string, gameNo: number) {
+  const recalculated = recalculatePointEvents(events.filter((event) => event.tournamentId === tournamentId && event.gameNo === gameNo));
+  return [
+    ...events.filter((event) => !(event.tournamentId === tournamentId && event.gameNo === gameNo)),
+    ...recalculated,
+  ];
+}
+
+async function recalculateGameScoresInSupabase(tournamentId: string, gameNo: number) {
+  const { data, error } = await supabase
+    .from("tournament_lineup_point_events")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .eq("game_no", gameNo)
+    .order("event_order", { ascending: true })
+    .order("point_no", { ascending: true });
+  if (error) throw error;
+  const recalculated = recalculatePointEvents(((data ?? []) as TournamentLineupPointEventRow[]).map(mapTournamentLineupPointEvent));
+  for (const event of recalculated) {
+    await supabase
+      .from("tournament_lineup_point_events")
+      .update({
+        event_order: event.eventOrder,
+        point_no: event.pointNo,
+        team_score_after: event.teamScoreAfter,
+        opponent_score_after: event.opponentScoreAfter,
+      })
+      .eq("id", event.id)
+      .throwOnError();
+  }
+}
 
 async function selectTable<T>(table: string, query = "*"): Promise<T[]> {
   const { data, error } = await supabase.from(table).select(query);
@@ -299,6 +453,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         tournamentStatsRows,
         lineupRows,
         lineupPlayerRows,
+        lineupGameStatsRows,
+        lineupPointEventRows,
         fitnessRows,
         injuryRows,
         clubPageRowsRaw,
@@ -319,6 +475,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         publicOnly ? Promise.resolve([] as TournamentPlayerStatsRow[]) : selectTable<TournamentPlayerStatsRow>("tournament_player_stats"),
         publicOnly ? Promise.resolve([] as TeamLineupRow[]) : selectTable<TeamLineupRow>("team_lineups"),
         publicOnly ? Promise.resolve([] as TeamLineupPlayerRow[]) : selectTable<TeamLineupPlayerRow>("team_lineup_players"),
+        publicOnly ? Promise.resolve([] as TournamentLineupGameStatsRow[]) : selectTable<TournamentLineupGameStatsRow>("tournament_lineup_game_stats"),
+        publicOnly ? Promise.resolve([] as TournamentLineupPointEventRow[]) : selectTable<TournamentLineupPointEventRow>("tournament_lineup_point_events"),
         publicOnly ? Promise.resolve([] as FitnessRecordRow[]) : selectTable<FitnessRecordRow>("fitness_records"),
         publicOnly ? Promise.resolve([] as InjuryRecordRow[]) : selectTable<InjuryRecordRow>("injury_records"),
         selectTable<ClubPageRow>("club_pages"),
@@ -351,6 +509,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         tournamentPlayers: tournamentPlayerRows.map(mapTournamentPlayer),
         tournamentStats: tournamentStatsRows.map(mapTournamentStats),
         teamLineups: mapLineups(lineupRows, lineupPlayerRows),
+        tournamentLineupGameStats: lineupGameStatsRows.map(mapTournamentLineupGameStats),
+        tournamentLineupPointEvents: lineupPointEventRows.map(mapTournamentLineupPointEvent),
         fitnessRecords: fitnessRows.map(mapFitnessRecord),
         injuryRecords: injuryRows.map(mapInjuryRecord),
         clubPages: clubPageRows.map(mapClubPage),
@@ -599,6 +759,112 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         });
         return created;
       },
+      createTournamentWithLineups: async ({ tournament, tournamentPlayers, lineups }) => {
+        if (hasSupabaseEnv) {
+          const { data: tournamentRow, error: tournamentError } = await supabase.from("tournaments").insert(tournamentPayload(tournament)).select("*").single<TournamentRow>();
+          if (tournamentError) throw tournamentError;
+          const created = mapTournament(tournamentRow);
+
+          const selectedRows = tournamentPlayers.map((row) => {
+            assertUuid(row.playerId, "Player ID");
+            return { tournament_id: created.id, player_id: row.playerId, role: fromTournamentRole(row.role) };
+          });
+          if (selectedRows.length) await supabase.from("tournament_players").insert(selectedRows).throwOnError();
+
+          for (const lineup of lineups) {
+            assertUuid(created.id, "Tournament ID");
+            const { data: lineupRow, error: lineupError } = await supabase
+              .from("team_lineups")
+              .insert({ tournament_id: created.id, lineup_name: lineup.name, ratio: lineup.ratio ?? "A", note: lineup.notes ?? "", created_by: currentUser?.id ?? null })
+              .select("*")
+              .single<TeamLineupRow>();
+            if (lineupError) throw lineupError;
+            const rows = teamLineupPlayerPayload(lineup.players, lineupRow.id);
+            if (rows.length) await supabase.from("team_lineup_players").insert(rows).throwOnError();
+          }
+
+          await refreshData();
+          return created;
+        }
+
+        const created: Tournament = { ...tournament, id: makeId("tr") };
+        const selected = tournamentPlayers.map((row) => ({ id: makeId("tp"), tournamentId: created.id, playerId: row.playerId, role: row.role }));
+        const createdLineups = lineups.map((lineup) => ({
+          ...lineup,
+          id: makeId("lineup"),
+          tournamentId: created.id,
+          createdAt: new Date().toISOString(),
+          players: lineup.players.map((player, index) => ({
+            ...player,
+            id: player.id || makeId("lp"),
+            lineOrder: Number(player.lineOrder || index + 1),
+          })),
+        }));
+
+        setData((current) => ({
+          ...current,
+          tournaments: [created, ...current.tournaments],
+          tournamentPlayers: [...selected, ...current.tournamentPlayers],
+          teamLineups: [...createdLineups, ...current.teamLineups],
+        }));
+
+        return created;
+      },
+      updateTournamentWithLineups: (tournamentId, payload) => {
+        const selected = payload.tournamentPlayers.map((row) => ({ id: makeId("tp"), tournamentId, playerId: row.playerId, role: row.role }));
+        const nextLineups = payload.lineups.map((lineup) => ({
+          ...lineup,
+          id: lineup.id || makeId("lineup"),
+          tournamentId,
+          createdAt: data.teamLineups.find((item) => item.id === lineup.id)?.createdAt ?? new Date().toISOString(),
+          players: lineup.players.map((player, index) => ({ ...player, id: player.id || makeId("lp"), lineOrder: Number(player.lineOrder || index + 1) })),
+        }));
+
+        setData((current) => ({
+          ...current,
+          tournaments: current.tournaments.map((item) => (item.id === tournamentId ? { ...item, ...payload.tournament, id: tournamentId } : item)),
+          tournamentPlayers: [...current.tournamentPlayers.filter((item) => item.tournamentId !== tournamentId), ...selected],
+          teamLineups: [...current.teamLineups.filter((item) => item.tournamentId !== tournamentId), ...nextLineups],
+        }));
+
+        void runWrite("Unable to update tournament flow.", async () => {
+          assertUuid(tournamentId, "Tournament ID");
+          await supabase.from("tournaments").update(tournamentPayload(payload.tournament)).eq("id", tournamentId).throwOnError();
+          await supabase.from("tournament_players").delete().eq("tournament_id", tournamentId).throwOnError();
+          if (selected.length) {
+            await supabase
+              .from("tournament_players")
+              .insert(selected.map((row) => {
+                assertUuid(row.playerId, "Player ID");
+                return { tournament_id: tournamentId, player_id: row.playerId, role: fromTournamentRole(row.role) };
+              }))
+              .throwOnError();
+          }
+
+          const existingLineups = data.teamLineups.filter((item) => item.tournamentId === tournamentId);
+          const keepIds = new Set(nextLineups.map((lineup) => lineup.id).filter((lineupId) => uuidPattern.test(lineupId)));
+          for (const lineup of existingLineups) {
+            if (!keepIds.has(lineup.id)) await supabase.from("team_lineups").delete().eq("id", lineup.id).throwOnError();
+          }
+          for (const lineup of nextLineups) {
+            if (uuidPattern.test(lineup.id)) {
+              await supabase.from("team_lineups").update({ lineup_name: lineup.name, ratio: lineup.ratio ?? "A", note: lineup.notes ?? "", created_by: currentUser?.id ?? null }).eq("id", lineup.id).throwOnError();
+              await supabase.from("team_lineup_players").delete().eq("team_lineup_id", lineup.id).throwOnError();
+              const rows = teamLineupPlayerPayload(lineup.players, lineup.id);
+              if (rows.length) await supabase.from("team_lineup_players").insert(rows).throwOnError();
+            } else {
+              const { data: savedLineup, error } = await supabase
+                .from("team_lineups")
+                .insert({ tournament_id: tournamentId, lineup_name: lineup.name, ratio: lineup.ratio ?? "A", note: lineup.notes ?? "", created_by: currentUser?.id ?? null })
+                .select("*")
+                .single<TeamLineupRow>();
+              if (error) throw error;
+              const rows = teamLineupPlayerPayload(lineup.players, savedLineup.id);
+              if (rows.length) await supabase.from("team_lineup_players").insert(rows).throwOnError();
+            }
+          }
+        });
+      },
       updateTournament: (tournament) => {
         setData((current) => ({ ...current, tournaments: current.tournaments.map((item) => (item.id === tournament.id ? { ...item, ...tournament } : item)) }));
         void runWrite("Unable to update tournament.", async () => {
@@ -635,10 +901,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
       updateTournamentStats: (stats) => {
         const id = stats.id ?? makeId("ts");
-        const next: TournamentStats = { id, tournamentId: stats.tournamentId, playerId: stats.playerId, score: stats.score, assist: stats.assist, blocks: stats.blocks, turnovers: stats.turnovers, gamesPlayed: stats.gamesPlayed, note: stats.note };
+        const next: TournamentStats = { id, tournamentId: stats.tournamentId, playerId: stats.playerId, teamLineupId: stats.teamLineupId ?? null, gameNo: stats.gameNo ?? 1, score: stats.score, assist: stats.assist, blocks: stats.blocks, turnovers: stats.turnovers, catches: stats.catches ?? 0, drops: stats.drops ?? 0, pointsPlayed: stats.pointsPlayed ?? stats.gamesPlayed, plusMinus: stats.plusMinus ?? 0, gamesPlayed: stats.gamesPlayed, note: stats.note };
         setData((current) => ({ ...current, tournamentStats: current.tournamentStats.some((item) => item.id === id) ? current.tournamentStats.map((item) => (item.id === id ? next : item)) : [next, ...current.tournamentStats] }));
         void runWrite("Unable to update stats.", async () => {
-          await supabase.from("tournament_player_stats").upsert({ id, ...tournamentStatsPayload(next) }, { onConflict: "tournament_id,player_id" }).throwOnError();
+          await supabase.from("tournament_player_stats").upsert({ id, ...tournamentStatsPayload(next) }).throwOnError();
+        });
+      },
+      saveGameStats: (tournamentId, gameNo, lineupId, stats) => {
+        const nextStats = stats.map((row) => ({
+          id: row.id ?? makeId("ts"),
+          tournamentId,
+          playerId: row.playerId,
+          teamLineupId: lineupId,
+          gameNo,
+          score: row.score,
+          assist: row.assist,
+          blocks: row.blocks,
+          turnovers: row.turnovers,
+          catches: row.catches,
+          drops: row.drops,
+          pointsPlayed: row.pointsPlayed,
+          plusMinus: row.plusMinus,
+          gamesPlayed: row.gamesPlayed,
+          note: row.note,
+        }));
+        const nextIds = new Set(nextStats.map((row) => row.id));
+
+        setData((current) => ({
+          ...current,
+          tournamentStats: [
+            ...nextStats,
+            ...current.tournamentStats.filter((row) => {
+              if (nextIds.has(row.id)) return false;
+              return !(row.tournamentId === tournamentId && row.gameNo === gameNo && (row.teamLineupId ?? null) === lineupId && nextStats.some((next) => next.playerId === row.playerId));
+            }),
+          ],
+        }));
+
+        void runWrite("Unable to save game stats.", async () => {
+          if (nextStats.length) {
+            await supabase.from("tournament_player_stats").upsert(nextStats.map((row) => ({ id: row.id, ...tournamentStatsPayload(row) }))).throwOnError();
+          }
         });
       },
       deleteTournamentStats: (statsId) => {
@@ -647,27 +950,184 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           await supabase.from("tournament_player_stats").delete().eq("id", statsId).throwOnError();
         });
       },
+      saveLineupGameStats: (stats) => {
+        const lineup = data.teamLineups.find((item) => item.id === stats.teamLineupId);
+        const tournament = data.tournaments.find((item) => item.id === stats.tournamentId);
+        const id = stats.id ?? makeId("tlgs");
+        const now = new Date().toISOString();
+        const next: TournamentLineupGameStats = {
+          id,
+          tournamentId: stats.tournamentId,
+          teamLineupId: stats.teamLineupId,
+          gameNo: Math.max(1, Number(stats.gameNo || 1)),
+          lineScore: Math.max(0, Number(stats.lineScore || 0)),
+          breaks: Math.max(0, Number(stats.breaks || 0)),
+          turnovers: Math.max(0, Number(stats.turnovers || 0)),
+          bolos: Math.max(0, Number(stats.bolos || 0)),
+          conceded: Math.max(0, Number(stats.conceded || 0)),
+          scorerPlayerId: stats.scorerPlayerId || null,
+          assistPlayerId: stats.assistPlayerId || null,
+          blockPlayerId: stats.blockPlayerId || null,
+          note: stats.note ?? "",
+          createdAt: now,
+          updatedAt: now,
+        };
+        setData((current) => ({
+          ...current,
+          tournamentLineupGameStats: [next, ...current.tournamentLineupGameStats.filter((row) => !(row.id === id || (row.tournamentId === next.tournamentId && row.teamLineupId === next.teamLineupId && row.gameNo === next.gameNo)))],
+        }));
+        void runWrite("Unable to save lineup game stats.", async () => {
+          validateLineupStatsPayload(next, lineup?.players ?? [], tournament?.totalGames ?? 1);
+          await supabase.from("tournament_lineup_game_stats").upsert({ id, ...tournamentLineupGameStatsPayload(next) }, { onConflict: "tournament_id,team_lineup_id,game_no" }).throwOnError();
+        });
+      },
+      updateLineupGameStats: (stats) => {
+        setData((current) => ({ ...current, tournamentLineupGameStats: current.tournamentLineupGameStats.map((row) => (row.id === stats.id ? { ...row, ...stats, updatedAt: new Date().toISOString() } : row)) }));
+        void runWrite("Unable to update lineup game stats.", async () => {
+          const existing = data.tournamentLineupGameStats.find((row) => row.id === stats.id);
+          const next = existing ? { ...existing, ...stats } : stats;
+          const lineup = data.teamLineups.find((item) => item.id === next.teamLineupId);
+          const tournament = data.tournaments.find((item) => item.id === next.tournamentId);
+          validateLineupStatsPayload(next, lineup?.players ?? [], tournament?.totalGames ?? 1);
+          await supabase.from("tournament_lineup_game_stats").update(tournamentLineupGameStatsPayload(next)).eq("id", stats.id).throwOnError();
+        });
+      },
+      deleteLineupGameStats: (statsId) => {
+        setData((current) => ({ ...current, tournamentLineupGameStats: current.tournamentLineupGameStats.filter((stats) => stats.id !== statsId) }));
+        void runWrite("Unable to delete lineup game stats.", async () => {
+          assertUuid(statsId, "Lineup stats ID");
+          await supabase.from("tournament_lineup_game_stats").delete().eq("id", statsId).throwOnError();
+        });
+      },
+      createLineupPointEvent: (event) => {
+        const lineup = data.teamLineups.find((item) => item.id === event.teamLineupId);
+        const tournament = data.tournaments.find((item) => item.id === event.tournamentId);
+        const id = event.id ?? makeId("tlpe");
+        const now = new Date().toISOString();
+        const gameEvents = sortPointEvents(data.tournamentLineupPointEvents.filter((row) => row.tournamentId === event.tournamentId && row.gameNo === Math.max(1, Number(event.gameNo || 1))));
+        const latest = gameEvents.at(-1);
+        const previousTeamScore = latest?.teamScoreAfter ?? 0;
+        const previousOpponentScore = latest?.opponentScoreAfter ?? 0;
+        const nextTeamScore = previousTeamScore + (event.eventType === "team_score" || event.eventType === "break" ? 1 : 0);
+        const nextOpponentScore = previousOpponentScore + (event.eventType === "opponent_score" ? 1 : 0);
+        const eventOrder = (latest?.eventOrder ?? latest?.pointNo ?? gameEvents.length) + 1;
+        const next: TournamentLineupPointEvent = {
+          id,
+          tournamentId: event.tournamentId,
+          teamLineupId: event.teamLineupId,
+          gameNo: Math.max(1, Number(event.gameNo || 1)),
+          pointNo: eventOrder,
+          eventOrder,
+          eventType: event.eventType,
+          teamScoreAfter: nextTeamScore,
+          opponentScoreAfter: nextOpponentScore,
+          scorerPlayerId: event.scorerPlayerId || null,
+          assistPlayerId: event.assistPlayerId || null,
+          blockPlayerId: event.blockPlayerId || null,
+          turnoverPlayerId: event.turnoverPlayerId || null,
+          note: event.note ?? "",
+          createdBy: currentUser?.id ?? null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        setData((current) => ({ ...current, tournamentLineupPointEvents: sortPointEvents([...current.tournamentLineupPointEvents, next]) }));
+        void runWrite("Unable to save point event.", async () => {
+          validateLineupPointEventPayload(next, lineup?.players ?? [], tournament?.totalGames ?? 1);
+          const { data: latestRow, error } = await supabase
+            .from("tournament_lineup_point_events")
+            .select("*")
+            .eq("tournament_id", next.tournamentId)
+            .eq("game_no", next.gameNo)
+            .order("event_order", { ascending: false })
+            .order("point_no", { ascending: false })
+            .limit(1)
+            .maybeSingle<TournamentLineupPointEventRow>();
+          if (error) throw error;
+          const latestEvent = latestRow ? mapTournamentLineupPointEvent(latestRow) : null;
+          const savedOrder = (latestEvent?.eventOrder ?? latestEvent?.pointNo ?? 0) + 1;
+          const savedPayload = {
+            ...next,
+            eventOrder: savedOrder,
+            pointNo: savedOrder,
+            teamScoreAfter: (latestEvent?.teamScoreAfter ?? 0) + (next.eventType === "team_score" || next.eventType === "break" ? 1 : 0),
+            opponentScoreAfter: (latestEvent?.opponentScoreAfter ?? 0) + (next.eventType === "opponent_score" ? 1 : 0),
+          };
+          await supabase.from("tournament_lineup_point_events").insert({ ...tournamentLineupPointEventPayload(savedPayload), created_by: currentUser?.id ?? null }).throwOnError();
+        });
+      },
+      updateLineupPointEvent: (event) => {
+        setData((current) => {
+          const existing = current.tournamentLineupPointEvents.find((row) => row.id === event.id);
+          const next = current.tournamentLineupPointEvents.map((row) => (row.id === event.id ? { ...row, ...event, updatedAt: new Date().toISOString() } : row));
+          return existing ? { ...current, tournamentLineupPointEvents: recalculatePointEventsForGame(next, event.tournamentId ?? existing.tournamentId, event.gameNo ?? existing.gameNo) } : current;
+        });
+        void runWrite("Unable to update point event.", async () => {
+          assertUuid(event.id, "Point event ID");
+          const existing = data.tournamentLineupPointEvents.find((row) => row.id === event.id);
+          const next = existing ? { ...existing, ...event } : event;
+          const lineup = data.teamLineups.find((item) => item.id === next.teamLineupId);
+          const tournament = data.tournaments.find((item) => item.id === next.tournamentId);
+          validateLineupPointEventPayload(next, lineup?.players ?? [], tournament?.totalGames ?? 1);
+          await supabase.from("tournament_lineup_point_events").update(tournamentLineupPointEventPayload(next)).eq("id", event.id).throwOnError();
+          if (next.tournamentId && next.gameNo) await recalculateGameScoresInSupabase(next.tournamentId, next.gameNo);
+        });
+      },
+      deleteLineupPointEvent: (eventId) => {
+        const deleted = data.tournamentLineupPointEvents.find((event) => event.id === eventId);
+        setData((current) => {
+          const next = current.tournamentLineupPointEvents.filter((event) => event.id !== eventId);
+          return deleted ? { ...current, tournamentLineupPointEvents: recalculatePointEventsForGame(next, deleted.tournamentId, deleted.gameNo) } : { ...current, tournamentLineupPointEvents: next };
+        });
+        void runWrite("Unable to delete point event.", async () => {
+          assertUuid(eventId, "Point event ID");
+          const { data: existing, error } = await supabase.from("tournament_lineup_point_events").select("*").eq("id", eventId).maybeSingle<TournamentLineupPointEventRow>();
+          if (error) throw error;
+          await supabase.from("tournament_lineup_point_events").delete().eq("id", eventId).throwOnError();
+          if (existing) await recalculateGameScoresInSupabase(existing.tournament_id, Math.max(1, Number(existing.game_no ?? 1)));
+        });
+      },
+      updateLineupRatio: (lineupId, ratio) => {
+        setData((current) => ({ ...current, teamLineups: current.teamLineups.map((lineup) => (lineup.id === lineupId ? { ...lineup, ratio } : lineup)) }));
+        void runWrite("Unable to update lineup ratio.", async () => {
+          assertUuid(lineupId, "Lineup ID");
+          await supabase.from("team_lineups").update({ ratio }).eq("id", lineupId).throwOnError();
+        });
+      },
       createLineup: (lineup) => {
-        const created: TeamLineup = { ...lineup, id: makeId("lineup"), createdAt: new Date().toISOString() };
+        const created: TeamLineup = { ...lineup, ratio: lineup.ratio ?? "A", id: makeId("lineup"), createdAt: new Date().toISOString() };
         setData((current) => ({ ...current, teamLineups: [created, ...current.teamLineups] }));
         void runWrite("Unable to create lineup.", async () => {
-          await supabase.from("team_lineups").insert({ id: created.id, tournament_id: created.tournamentId, lineup_name: created.name, note: created.notes ?? "", created_by: currentUser?.id ?? null }).throwOnError();
-          if (created.players.length) await supabase.from("team_lineup_players").insert(created.players.map((row) => ({ id: row.id || makeId("lp"), team_lineup_id: created.id, player_id: row.playerId, position: row.position, line_order: row.lineOrder }))).throwOnError();
+          assertUuid(created.tournamentId, "Tournament ID");
+          const { data: savedLineup, error } = await supabase
+            .from("team_lineups")
+            .insert({ tournament_id: created.tournamentId, lineup_name: created.name, ratio: created.ratio, note: created.notes ?? "", created_by: currentUser?.id ?? null })
+            .select("*")
+            .single<TeamLineupRow>();
+          if (error) throw error;
+          const rows = teamLineupPlayerPayload(created.players, savedLineup.id);
+          if (rows.length) await supabase.from("team_lineup_players").insert(rows).throwOnError();
         });
         return created;
       },
       updateLineup: (lineup) => {
         setData((current) => ({ ...current, teamLineups: current.teamLineups.map((item) => (item.id === lineup.id ? { ...item, ...lineup } : item)) }));
         void runWrite("Unable to update lineup.", async () => {
-          await supabase.from("team_lineups").update({ lineup_name: lineup.name, note: lineup.notes ?? "" }).eq("id", lineup.id).throwOnError();
+          assertUuid(lineup.id, "Lineup ID");
+          await supabase.from("team_lineups").update({ lineup_name: lineup.name, ratio: lineup.ratio ?? "A", note: lineup.notes ?? "" }).eq("id", lineup.id).throwOnError();
           if (lineup.players) {
             await supabase.from("team_lineup_players").delete().eq("team_lineup_id", lineup.id).throwOnError();
-            await supabase.from("team_lineup_players").insert(lineup.players.map((row) => ({ id: row.id || makeId("lp"), team_lineup_id: lineup.id, player_id: row.playerId, position: row.position, line_order: row.lineOrder }))).throwOnError();
+            const rows = teamLineupPlayerPayload(lineup.players, lineup.id);
+            if (rows.length) await supabase.from("team_lineup_players").insert(rows).throwOnError();
           }
         });
       },
       deleteLineup: (lineupId) => {
-        setData((current) => ({ ...current, teamLineups: current.teamLineups.filter((lineup) => lineup.id !== lineupId) }));
+        setData((current) => ({
+          ...current,
+          teamLineups: current.teamLineups.filter((lineup) => lineup.id !== lineupId),
+          tournamentLineupGameStats: current.tournamentLineupGameStats.filter((stats) => stats.teamLineupId !== lineupId),
+          tournamentLineupPointEvents: current.tournamentLineupPointEvents.filter((event) => event.teamLineupId !== lineupId),
+        }));
         void runWrite("Unable to delete lineup.", async () => {
           await supabase.from("team_lineups").delete().eq("id", lineupId).throwOnError();
         });
